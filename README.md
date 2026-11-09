@@ -14,3 +14,9 @@ Oefenmodule voor het radarexamen binnenvaart, gebaseerd op het lesboek *Radar, c
 ## Bestanden
 - `index.html`: de complete module (één bestand, geen installatie nodig).
 - `lesstof/`: samenvattingen per hoofdstuk en de verwerkte correcties uit de antwoorden.
+
+## Als app op je toestel zetten
+- **iPhone (Safari):** deelknop → *Zet op beginscherm*.
+- **Android (Chrome):** menu ⋮ → *App installeren* of *Toevoegen aan startscherm*.
+- **Windows (Edge):** menu ··· → *Apps* → *Deze site als app installeren*. Daarna staat de Radarcursus met eigen icoon in het Startmenu en kun je hem vastmaken aan de taakbalk.
+- **Windows (Chrome):** installatie-icoon rechts in de adresbalk, of menu ⋮ → *Opslaan en delen* → *Pagina installeren*.
