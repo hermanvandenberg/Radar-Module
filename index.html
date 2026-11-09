@@ -91,6 +91,12 @@ button:focus-visible,.opt:focus-visible{outline:3px solid var(--echo);outline-of
 .pill.go{background:var(--echo-soft);color:var(--ink)}
 .ch .meta{display:block;margin-top:4px;font-family:var(--f-mono,'IBM Plex Mono',monospace);font-size:.74rem;color:var(--muted)}
 .result .tally{color:var(--muted);font-size:.9rem}
+.sumlist{display:flex;flex-direction:column;gap:8px;margin-top:20px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:600 1rem var(--f-display);min-width:52px;min-height:44px;padding:0 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.sum h3{font-family:var(--f-display);font-size:1.05rem;margin:18px 0 6px}
+.sum h3:first-child{margin-top:4px}
+.sum li{margin-bottom:6px}
 .pill.lock{background:var(--bg);color:var(--muted)}
 .howto{margin-top:24px;padding:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.92rem;display:flex;flex-direction:column;gap:8px}
 .howto b{color:var(--ink)}
@@ -1075,12 +1081,14 @@ function home(){
       <div class="scope" aria-hidden="true">${scopeSvg()}<div class="sweep"></div></div>
     </section>
     <div class="chapters">${rows}</div>
+    <div class="sumlist"><span class="eyebrow">Samenvattingen</span><div class="chips">${CHAPTERS.map(c=>`<button class="chip" data-sum="${c.id}">H${c.id}</button>`).join('')}</div></div>
     <div class="howto">
       <p><b>Zo werkt het.</b> Elk hoofdstuk wisselt korte stukjes uitleg af met één of twee vragen. Aan het eind volgt een eindtoets van ${TEST_N} vragen. Heb je ze <b>allemaal goed</b>, dan ben je geslaagd. Alle hoofdstukken staan open: oefen ze in elke volgorde en zo vaak als je wilt.</p>
       <p>Je voortgang wordt op deze telefoon bewaard.</p>
       <button class="linkbtn" id="resetBtn">Voortgang wissen</button>
     </div>`;
   app.querySelectorAll('.ch:not([disabled])').forEach(b=>b.onclick=()=>chapterStart(+b.dataset.ch));
+  app.querySelectorAll('.chip[data-sum]').forEach(b=>b.onclick=()=>summary(+b.dataset.sum));
   const rb=$('#resetBtn');
   rb.onclick=()=>{
     if(rb.dataset.armed){S={passed:{},pos:{},stats:{}};save();home();return}
@@ -1112,10 +1120,10 @@ function renderStep(){
   setBar(`H${ch.id} · ${ch.title}`,`${i+1}/${n+1}`,(i/(n+1))*100);
   if(st.type==='info'){
     app.innerHTML=`<article class="card"><div class="kicker"><span class="eyebrow">Uitleg</span></div><h2>${st.h}</h2><div class="body">${st.html}</div></article>
-      <div class="actions"><button class="btn" id="next">Verder</button>${i>0?'<button class="btn ghost" id="prev">Vorige</button>':'<button class="btn ghost" id="skip">Direct naar de eindtoets</button>'}</div>`;
+      <div class="actions"><button class="btn" id="next">Verder</button>${i>0?'<button class="btn ghost" id="prev">Vorige</button>':'<button class="btn ghost" id="sumBtn">Samenvatting</button><button class="btn ghost" id="skip">Direct naar de eindtoets</button>'}</div>`;
     $('#next').onclick=()=>{cur.i++;renderStep()};
     if(i>0) $('#prev').onclick=()=>{cur.i--;renderStep()};
-    else $('#skip').onclick=()=>{cur.i=n;renderStep()};
+    else {$('#skip').onclick=()=>{cur.i=n;renderStep()}; $('#sumBtn').onclick=()=>summary(ch.id,()=>{cur={ch,i:0};renderStep()});}
   } else {
     const q=prep(st);
     app.innerHTML=`<article class="card"><span class="qtag">● Vraag</span><p class="qtext">${esc(q.q)}</p><div class="opts" id="opts"></div><div id="fb"></div></article>
@@ -1143,6 +1151,66 @@ function markOpts(q,pick){
   });
 }
 
+/* ============ SAMENVATTINGEN ============ */
+const SUMS={
+1:[
+ ["Wat is radar",["RADAR = Radio Detection And Ranging: afstand en richting bepalen met elektromagnetische golven (echolocatie).","Vier hoofdonderdelen: zender (magnetron), scanner, ontvanger en scherm. Een zend-ontvangschakelaar sluit de ontvanger tijdens het zenden af.","Radargolven gaan met de lichtsnelheid: <b>300 m per µs</b>. Echo na 4 µs = 1200 m heen en terug = object op 600 m."]],
+ ["Golven en pulsen",["Golflengte rivierradar maximaal 3,2 cm, frequentie 9300–9500 MHz.","Pulsduur 1 µs = 300 m pulslengte, 0,1 µs = 30 m. Kleinste af te beelden afstand: ten hoogste 15 m.","PRF = aantal pulsen per seconde. Langere puls → lagere PRF."]],
+ ["Scanner en kiellijn",["Scanner: zenden in een smalle bundel, echo ontvangen, peilen en de kiellijn maken. Maximale aanwijsfout 1°.","Horizontale bundel maximaal 1,2°, verticaal maximaal 30°. Bundelhoek = 70 × golflengte ÷ antennelengte. Langere scanner = smallere bundel.","Minimaal 24 omwentelingen per minuut. Scanner zo dicht mogelijk boven de lengteas, vrij van obstakels."]],
+ ["Beeld en onderscheidend vermogen",["Binnenvaart vaart <b>head-up</b>: de kiellijn wijst altijd naar boven.","Radiaal: twee objecten achter elkaar zijn gescheiden bij meer dan <b>een halve pulslengte</b>. Eis: 15 m uit elkaar op dezelfde peiling, tussen 15 en 1200 m.","Horizontaal: twee objecten op 1200 m, <b>30 m</b> uit elkaar, moeten gescheiden zichtbaar zijn. Bepaald door bundelbreedte en afstand."]],
+ ["Dode zone en dode hoek",["Dode zone: gebied rond de scanner zonder echo's, straal = halve pulslengte.","Dode hoek: ruimte vóór het schip die je niet overziet. Bepaald door hoogte en plaats van de radar, stuurlast, opbouw voorschip en deklast.","Inland ECDIS-overlay bij slecht zicht alleen in navigatiemodus."]]
+],
+2:[
+ ["Opstarten",["Eerst controleren: antenne vrij, gain, FTC en STC uit.","STBY → opwarmen (PREHEAT wordt STANDBY), binnen <b>4 minuten</b> gebruiksklaar. Standby: scherm aan, magnetron zendt niet.","TX → gain op tot echo's en lichte ruis → Tune op A → FTC tot ruis net weg → bereik kiezen → bijregelen."]],
+ ["Puls, tune, brilliance, gain",["Tot <b>2000 m</b> korte puls. Lange puls: grotere echo's, grotere dode zone, slechter afstand onderscheidend vermogen.","Tune slecht afgestemd: zwakke echo's verdwijnen. Afstemmen op het grootste bereik.","Brilliance te laag: kleine echo's weg. Te hoog: beeld gloeit en smeert uit.","Gain te hoog: stoorecho's en ineenvloeiende echo's, een <b>te vet</b> beeld."]],
+ ["Onderdrukkers",["<b>STC</b> (SEA, Sensitivity Time Control) tegen golfslag: werkt vanuit het midden, effectief tot <b>1200 m</b>. Niet voor de rand van het scherm.","<b>FTC</b> (RAIN, Fast Time Constant) tegen neerslag: werkt over het <b>hele beeld</b>. Ook tegen het stoorveld achter een brug."]],
+ ["Meten en lijnen",["Bereik = middelpunt (scanner) tot rand. 1200 m → ringen 200 m, 1600/2000 m → 400 m.","VRM = verstelbare afstandsring (stippel). EBL = peilingslijn vanaf de kiellijn. Beide digitaal uitleesbaar.","Echo blijft op de EBL en komt dichterbij = <b>gevaar voor aanvaring</b>.","HL OFF alleen zolang je drukt. P-LINE = lijnen evenwijdig aan de kiellijn voor bruggen en sluizen."]],
+ ["Overige functies",["Decentreren is <b>wettelijk verplicht</b>: meer zicht vooruit. Gecentreerd bij kop voornemen.","Trails: smeereffect door relatief beeld, bruikbaar op ruim water. Own Mark: vorm eigen schip."]]
+],
+3:[
+ ["Voorwaarden voor een echo",["Het voorwerp moet geraakt worden, loodrecht op de bundel staan, hoog genoeg zijn en de straling niet doorlaten.","Kunststof schepen zijn slecht zichtbaar; kleine schepen voeren daarom een radarreflector.","Radar toont plaats goed, vorm minder, kleur niet."]],
+ ["Versterking en weergave",["Passief: radarreflector met drie loodrechte vlakken. Actief: <b>Racon</b>, geeft een morseteken op het scherm.","Door de bundelbreedte wordt een echo breder dan het voorwerp. Afstand wordt gemeten tot de voorkant."]],
+ ["Lastige objecten",["Bruggen: één streep, pijlers vaak niet zichtbaar; stoorveld erachter wegwerken met FTC of minder gain.","Hoogspanningsleiding: echo waar de draad loodrecht getroffen wordt, op de lijn van de masten, volgt je op ramkoers. Koers wijzigen: draadecho beweegt mee, een <b>ankerligger blijft liggen</b>.","Geladen binnenvaartschip: 1–3 losse echo's. Lege zeeschepen soms bijna onzichtbaar."]],
+ ["Storing en valse echo's",["Neerslag: rain clutter. Kun je dan je veiligheidsruimte niet overzien, stop dan.","Golfslag: een paar golfecho's moeten zichtbaar blijven.","Radarinterferentie: spaken van het midden naar buiten, weg met IR of kleiner bereik.","Zijlussen: boog rond het midden. Indirecte echo: via een ander object, op grotere afstand. Meervoudige echo: de eerste is de ware.","Schaduw: achter hoge objecten kan een schip verborgen zitten."]]
+],
+4:[
+ ["Basisbegrippen",["Aansturingspunt: referentiepunt aan de horizon bij een koerswijziging, minstens ±20 × scheepslengte ver.","Invloedssfeer: het gebied dat je nodig hebt om veilig te varen en op tijd te stoppen. Padbreedte recht ±1,5 × scheepsbreedte.","Radarbeeld loopt iets achter: blijf voortdurend kijken."]],
+ ["Bochten",["Houd zoveel mogelijk stuurboordwal.","Kiellijnafstand = scanner tot snijpunt kiellijn met de oever. Met de buitenbocht aan bakboord is die langer (afvarend bijvoorbeeld BB-bocht 400 m, SB-bocht 600 m).","Tegenligger in de buitenbocht: gevaarlijk bij gelijke kiellijnafstanden. Loopt zijn kiellijn vóór je scanner langs, dan is er gevaar."]],
+ ["Bochtaanwijzer",["De BAW meet de draaisnelheid in graden per minuut en is verplicht volgens BPR en RPR.","Bij zijwaartse drift zonder koersverandering geeft de BAW niets aan. Slingeren van de rivierpiloot: demping gebruiken."]],
+ ["Aanvaringsgevaar",["Relatief beeld: de oever beweegt tegengesteld aan je koers. Relatieve baan op je centrum = direct handelen.","Ruimtes: 2000–1000 m observatie, 1000–400 m reactie, 0–400 m veiligheid (alleen noodmaatregelen).","10 en 20 km/u op 2000 m: na 4 minuten ontmoet je elkaar."]],
+ ["Communicatie en roerganger",["9 van de 10 aanvaringen bij slecht zicht komen door slechte communicatie. Meld met de 3 W's: wie, waar, waarheen.","AIS is geen navigatiemiddel.","Roerganger: order herhalen, uitvoeren, na uitvoering nogmaals melden. Drie soorten orders: stuur-, roer- en bochtaanwijzerorders."]]
+],
+5:[
+ ["Uitrusting",["Radar of Inland ECDIS + <b>bochtaanwijzer</b> + <b>radarpatenthouder</b>. Oefenen bij goed zicht mag zonder patent.","Op bijlage 9-vaarwegen uitluisteren op <b>twee kanalen</b>."]],
+ ["Slecht zicht",["Op radar varen met aangepaste snelheid, of naar de dichtstbijzijnde geschikte plaats en stilliggen met het vaarwater vrij.","Stilliggend en je hoort iemand naderen: <b>reeks klokslagen</b>, hoogstens elke minuut. Zeeschip mag kort-lang-kort."]],
+ ["Varen op radar",["Twee personen in het stuurhuis, tenzij het certificaat 'één persoon' toestaat.","Meld op kanaal 10: naam, positie, vaarrichting, soort schip. Standaard <b>bakboord op bakboord</b>.","Geen contact: <b>1 lange stoot</b> (veerpont 1 lang + 4 kort), vaart minderen, zo nodig stoppen."]],
+ ["Zonder radar",["1 lange stoot hoogstens elke minuut, uitkijk voorop, marifoon beantwoorden, oever houden."]],
+ ["Reflector en meldplicht",["Radarreflector voor kleine schepen in Zuid-Holland, Zeeland en de zeehavens bij slecht zicht; op de Westerschelde altijd.","Meldplicht (IVS90) onder meer voor gevaarlijke stoffen en schepen langer dan 110 m. Blokgebied: bord B11 'VHF 18'."]]
+],
+6:[
+ ["Marifoon en radar",["Marifoon verplicht voor alle motorschepen behalve kleine. Taal van het land, anders Duits. Twee kanalen met twee marifoons.","Radar en BAW volgens ES-TRIN 7.06, patent of erkend diploma. Oefenen bij goed zicht mag.","Snelle schepen (meer dan 40 km/u) varen <b>altijd</b> op radar."]],
+ ["Slecht zicht",["Alle schepen op radar met aangepaste snelheid; kleine schepen luisteren uit op kanaal 10.","Zonder radar direct een ligplaats zoeken: oever houden, mistsein elke minuut, uitkijk, melden dat je niet op radar vaart.","Stilliggend: positie geven via marifoon, zonder marifoon klokslagen. Ten anker niet gaan slapen."]],
+ ["Ontmoeten",["<b>Opvaart meldt en bepaalt.</b> Bakboord op bakboord op trajecten met geregelde ontmoetingen, elders ook stuurboord op stuurboord.","Geen contact: 1 lange stoot en vaart minderen. Houd de zijkant van het vaarwater."]],
+ ["Bijzondere regels",["Benedenstrooms van Spijksche Veer (km 857,40) stuurboordwal houden; die plicht geldt bij slecht zicht op alle Nederlandse vaarwegen.","Anker- en ligverboden op Waal, Rijn en Lek."]]
+],
+7:[
+ ["Beperkt zicht en snelheid",["Beperkt zicht: mist, nevel, sneeuw, zware regen, rook of damp.","Altijd een veilige snelheid. Met radar extra letten op beperkingen, bereik, clutter en kleine schepen die je mist.","Heb je radar, gebruik die op de Westerschelde <b>ook bij goed zicht</b>."]],
+ ["Aanvaringsgevaar",["Gebruik alle middelen; <b>bij twijfel is er gevaar</b>. Geen conclusies uit schaarse radarinformatie.","Uitkijk met zicht, gehoor en alle middelen. Luister naar de VTS-kanalen."]],
+ ["Gedrag",["Op radar varen of stilliggen, machines klaar.","Mistsein vóór de dwarslijn: vaart terug tot minimale stuursnelheid."]],
+ ["Geluidsseinen (hoogstens elke 2 min)",["Varend met vaart: 1 lang. Gestopt: 2 lang.","Beperkt schip: 1 lang + 2 kort. Gesleept: 1 lang + 3 kort.","Ten anker: klok 5 s per minuut (≥ 100 m ook gong achter), mag kort-lang-kort. Aan de grond: 3 klokslagen voor en na de klok.","Onthoud: <b>SRW 2 minuten, BPR 1 minuut</b>."]]
+]};
+function summary(id,back){
+  const ch=CHAPTERS.find(c=>c.id===id), sm=SUMS[id]||[];
+  setBar(`H${id} · Samenvatting`,'',100);
+  app.innerHTML=`<article class="card sum"><span class="eyebrow">Samenvatting</span><h2>H${id} · ${esc(ch.title)}</h2>
+    <div class="body">${sm.map(([h,items])=>`<h3>${h}</h3><ul>${items.map(t=>`<li>${t}</li>`).join('')}</ul>`).join('')}</div></article>
+    <div class="actions"><button class="btn echo" id="sumTest">Naar de eindtoets</button><button class="btn" id="sumStudy">Lesstof doorlopen</button><button class="btn ghost" id="sumBack">${back?'Terug':'Naar overzicht'}</button></div>`;
+  $('#sumTest').onclick=()=>{cur={ch,i:ch.steps.length};renderStep()};
+  $('#sumStudy').onclick=()=>{cur={ch,i:0};renderStep()};
+  $('#sumBack').onclick=back||home;
+  toTop();
+}
+
 /* ============ EINDTOETS ============ */
 let T=null;
 function testIntro(){
@@ -1152,8 +1220,9 @@ function testIntro(){
   app.innerHTML=`<article class="card"><span class="eyebrow">Eindtoets</span><h2>Eindtoets hoofdstuk ${ch.id}</h2>
     <div class="body"><p>Je krijgt <strong>${N} vragen</strong> achter elkaar over ${esc(ch.title.toLowerCase())}. Pas aan het eind zie je wat je goed en fout had.</p>
     <p>Heb je <strong>alle ${N} vragen goed</strong>, dan ben je geslaagd. Zo niet, dan zie je hoeveel je fout had en wat het juiste antwoord was. Je kunt de eindtoets zo vaak doen als je wilt, steeds met andere vragen.</p></div></article>
-    <div class="actions"><button class="btn echo" id="go">Start eindtoets</button><button class="btn ghost" id="prev">Lesstof nog eens doorlopen</button></div>`;
+    <div class="actions"><button class="btn echo" id="go">Start eindtoets</button><button class="btn ghost" id="sumBtn">Samenvatting lezen</button><button class="btn ghost" id="prev">Lesstof nog eens doorlopen</button></div>`;
   $('#go').onclick=startTest;
+  $('#sumBtn').onclick=()=>summary(ch.id,()=>{cur={ch,i:n};renderStep()});
   $('#prev').onclick=()=>{cur.i=0;renderStep()};
   toTop();
 }
@@ -1196,11 +1265,12 @@ function testResult(){
     <div class="actions">
       ${ok&&next&&next.steps?`<button class="btn echo" id="nextCh">Naar hoofdstuk ${next.id}</button>`:''}
       <button class="btn ${ok?'ghost':'echo'}" id="retry">Eindtoets opnieuw</button>
-      ${ok?'':'<button class="btn ghost" id="study">Lesstof doorlopen</button>'}
+      ${ok?'':'<button class="btn ghost" id="sumBtn">Samenvatting lezen</button><button class="btn ghost" id="study">Lesstof doorlopen</button>'}
       <button class="btn ghost" id="home">Naar overzicht</button>
     </div>`;
   if($('#retry')) $('#retry').onclick=startTest;
   if($('#study')) $('#study').onclick=()=>{cur.i=0;renderStep()};
+  if($('#sumBtn')) $('#sumBtn').onclick=()=>summary(ch.id);
   if($('#nextCh')) $('#nextCh').onclick=()=>chapterStart(next.id);
   $('#home').onclick=home;
   toTop();
@@ -1209,7 +1279,6 @@ function testResult(){
 $('#backBtn').onclick=home;
 home();
 </script>
-
 <script>if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}</script>
 </body>
 </html>
