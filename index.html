@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Radarcursus Binnenvaart</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Saira+Semi+Condensed:wght@500;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: één smalle kolom, telefoon eerst. Kaart-achtige lesstappen, vaste voortgangsbalk bovenin. */
+:root{
+  --bg:#eef2f4;
+  --surface:#ffffff;
+  --ink:#14232c;
+  --muted:#5a6b75;
+  --line:#d3dde2;
+  --navy:#123a4f;
+  --echo:#e09a1e;        /* amber radarecho */
+  --echo-soft:#fbf0dc;
+  --ok:#1d7a4f; --ok-soft:#e1f2e9;
+  --bad:#b4372b; --bad-soft:#f8e3e0;
+  --scope:#0f2a38; --scope-ring:#2f5a6e; --scope-echo:#f2b443;
+  --f-display:"Saira Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c171d;--surface:#132630;--ink:#e4ecef;--muted:#93a8b2;--line:#25404d;--navy:#9fd0e6;
+  --echo:#f2b443;--echo-soft:#33290f;--ok:#5ccf93;--ok-soft:#12301f;--bad:#f08a7e;--bad-soft:#3a1915;
+  --scope:#071319;--scope-ring:#2a5263;--scope-echo:#f2b443;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c171d;--surface:#132630;--ink:#e4ecef;--muted:#93a8b2;--line:#25404d;--navy:#9fd0e6;
+  --echo:#f2b443;--echo-soft:#33290f;--ok:#5ccf93;--ok-soft:#12301f;--bad:#f08a7e;--bad-soft:#3a1915;
+  --scope:#071319;--scope-ring:#2a5263;--scope-echo:#f2b443;color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.55;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:620px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 48px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.15;margin:0}
+h1{font-size:2rem;font-weight:700;letter-spacing:.01em}
+h2{font-size:1.45rem;font-weight:700}
+h3{font-size:1.1rem;font-weight:700}
+p{margin:0}
+.eyebrow{font-family:var(--f-display);font-weight:500;font-size:.82rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit}
+button:focus-visible,.opt:focus-visible{outline:3px solid var(--echo);outline-offset:2px}
+
+/* Top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-in{max-width:620px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px;display:flex;align-items:center;gap:12px;min-height:56px}
+.back{border:0;background:none;padding:8px 10px 8px 0;font-family:var(--f-display);font-weight:700;font-size:1rem;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:4px}
+.bar-title{flex:1;min-width:0;font-family:var(--f-display);font-weight:700;font-size:1.05rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.count{font-family:var(--f-mono);font-size:.85rem;color:var(--muted)}
+.prog{height:4px;background:var(--line)}
+.prog>i{display:block;height:100%;background:var(--echo);width:0;transition:width .3s}
+
+/* Home */
+.hero{display:grid;grid-template-columns:1fr 112px;gap:16px;align-items:center;padding-block:20px 8px}
+.hero p{color:var(--muted);margin-top:8px}
+.scope{width:112px;aspect-ratio:1;max-width:100%;border-radius:50%;background:var(--scope);position:relative;overflow:hidden;box-shadow:inset 0 0 0 2px var(--scope-ring)}
+.scope svg{position:absolute;inset:0;width:100%;height:100%}
+.sweep{position:absolute;inset:0;background:conic-gradient(from 0deg,transparent 0deg,transparent 300deg,color-mix(in srgb,var(--scope-echo) 45%,transparent) 360deg);animation:spin 2.5s linear infinite;border-radius:50%}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.sweep{animation:none}}
+.chapters{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.ch{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;text-align:left;width:100%;cursor:pointer}
+.ch[disabled]{cursor:default;opacity:.6}
+.ch .num{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:1.25rem;background:var(--bg);color:var(--navy);border:2px solid var(--line)}
+.ch.passed .num{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.ch.open .num{border-color:var(--echo)}
+.ch .t{min-width:0}
+.ch .t b{display:block;font-family:var(--f-display);font-size:1.12rem;line-height:1.2}
+.ch .t span{font-size:.86rem;color:var(--muted)}
+.pill{font-size:.75rem;font-weight:700;padding:4px 9px;border-radius:99px;white-space:nowrap;letter-spacing:.02em}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.go{background:var(--echo-soft);color:var(--ink)}
+.ch .meta{display:block;margin-top:4px;font-family:var(--f-mono,'IBM Plex Mono',monospace);font-size:.74rem;color:var(--muted)}
+.result .tally{color:var(--muted);font-size:.9rem}
+.pill.lock{background:var(--bg);color:var(--muted)}
+.howto{margin-top:24px;padding:16px;border-top:1px solid var(--line);color:var(--muted);font-size:.92rem;display:flex;flex-direction:column;gap:8px}
+.howto b{color:var(--ink)}
+.linkbtn{background:none;border:0;padding:0;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:.85rem;align-self:flex-start}
+
+/* Lesson card */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px 18px;margin-top:16px;display:flex;flex-direction:column;gap:14px}
+.card .kicker{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.body{display:flex;flex-direction:column;gap:12px}
+.body ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.body strong{color:var(--navy)}
+.key{background:var(--echo-soft);border-left:4px solid var(--echo);padding:10px 12px;border-radius:0 8px 8px 0;font-size:.95rem}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+.tbl table{border-collapse:collapse;width:100%;font-size:.88rem}
+.tbl th,.tbl td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th{font-family:var(--f-display);font-weight:700;background:var(--bg)}
+.tbl td{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.tbl tr:last-child td{border-bottom:0}
+.fig{background:var(--bg);border-radius:10px;padding:10px;overflow-x:auto}
+.fig svg{display:block;width:100%;height:auto;max-width:520px;margin:0 auto}
+.fig figcaption{font-size:.8rem;color:var(--muted);text-align:center;margin-top:4px}
+figure{margin:0}
+
+/* Question */
+.qtag{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-display);font-weight:700;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--echo)}
+.qtext{font-size:1.15rem;font-weight:700;line-height:1.4}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;padding:14px;border:2px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer;min-height:56px;line-height:1.4}
+.opt .l{flex:none;width:28px;height:28px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:.9rem;color:var(--muted)}
+.opt.sel{border-color:var(--navy)}
+.opt.sel .l{background:var(--navy);border-color:var(--navy);color:var(--surface)}
+.opt.right{border-color:var(--ok);background:var(--ok-soft)}
+.opt.right .l{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.wrong .l{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.opt[disabled]{cursor:default}
+.fb{padding:12px 14px;border-radius:10px;font-size:.95rem}
+.fb.ok{background:var(--ok-soft)}
+.fb.bad{background:var(--bad-soft)}
+.fb b{display:block;margin-bottom:2px}
+
+/* Actions */
+.actions{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.btn{width:100%;min-height:54px;border-radius:12px;border:0;font-family:var(--f-display);font-weight:700;font-size:1.12rem;letter-spacing:.02em;cursor:pointer;background:var(--navy);color:var(--surface)}
+.btn[disabled]{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--navy);border:2px solid var(--line)}
+.btn.echo{background:var(--echo);color:#1b1404}
+
+/* Result */
+.result{text-align:center;padding-block:24px 8px;display:flex;flex-direction:column;gap:10px;align-items:center}
+.score{font-family:var(--f-mono);font-size:3rem;line-height:1}
+.score.ok{color:var(--ok)}.score.bad{color:var(--bad)}
+.review{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.rv{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--bad);border-radius:0 10px 10px 0;padding:12px 14px;font-size:.93rem;display:flex;flex-direction:column;gap:4px}
+.rv .a{color:var(--ok);font-weight:700}
+.rv .y{color:var(--bad)}
+.intro-list{margin:0;padding-left:1.2em}
+</style>
+
+<div class="bar" id="bar" hidden>
+  <div class="bar-in">
+    <button class="back" id="backBtn" aria-label="Terug naar overzicht">‹ Overzicht</button>
+    <div class="bar-title" id="barTitle"></div>
+    <div class="count" id="barCount"></div>
+  </div>
+  <div class="prog"><i id="progFill"></i></div>
+</div>
+<main class="wrap" id="app"></main>
+
+<script>
+/* ============ LESSTOF ============
+   Elke stap is {type:'info'} of {type:'q'}. Eindtoets: pool waaruit TEST_N vragen getrokken worden.
+   Vraag: {q, o:[opties], a:indexJuist, w:uitleg}. Optie-volgorde wordt geschud. */
+const TEST_N = 15;
+
+const CHAPTERS = [
+{ id:1, title:"Radartechniek", sub:"Hoe een radar werkt: golven, pulsen, scanner en beeld",
+  steps:[
+  {type:'info', h:"Wat is radar?", html:`
+    <p>Het woord <strong>RADAR</strong> is een afkorting van <strong>Ra</strong>dio <strong>D</strong>etection <strong>A</strong>nd <strong>R</strong>anging: de omgeving afzoeken en de afstand bepalen met elektromagnetische golven.</p>
+    <p>Het principe lijkt op <strong>echolocatie</strong> van een vleermuis. Die stuurt geluid uit en luistert naar de echo om te bepalen waar iets is. Sonar doet dat met geluid onder water. Radar doet het met elektromagnetische golven, door de lucht.</p>
+    <p>De eerste radar bestond uit een zender, een ontvanger en een oscilloscoop. Een moderne radar laat de <strong>afstand én richting</strong> tot ieder doel direct op het scherm zien.</p>
+    <div class="key">Waarom techniek kennen? Je krijgt terecht vertrouwen in de apparatuur, zonder onberedeneerd wantrouwen en zonder ongefundeerd vertrouwen. Je kunt beter beoordelen hoe goed de informatie op het scherm is.</div>`},
+  {type:'q', q:"Waar staat de afkorting RADAR voor?", o:["Radio Detection And Ranging","Radio Direction And Range","Reflected Audio Detection And Ranging","Radio Distance And Reflection"], a:0, w:"RADAR = Radio Detection And Ranging."},
+  {type:'q', q:"Wat is het verschil tussen sonar en radar?", o:["Sonar gebruikt geluid onder water, radar gebruikt elektromagnetische golven door de lucht","Sonar werkt in de lucht, radar onder water","Sonar meet alleen richting, radar alleen afstand","Er is geen verschil"], a:0, w:"Sonar: geluidsgolven onder water. Radar: elektromagnetische golven in de lucht, net als de echolocatie van een vleermuis."},
+
+  {type:'info', h:"Opbouw van een radarinstallatie", html:`
+    <p>Een radarinstallatie bestaat uit vier hoofdonderdelen:</p>
+    <ul><li><strong>Zender</strong> (transmitter)</li><li><strong>Antenne</strong> (scanner)</li><li><strong>Ontvanger</strong> (receiver)</li><li><strong>Scherm/beeldkast</strong> (display)</li></ul>
+    <p>Daarnaast zijn er een <strong>synchronisatie-eenheid</strong> en een <strong>zend/ontvangschakelaar</strong>.</p>
+    <figure class="fig">${svgBlock()}<figcaption>Puls gaat uit via de scanner, de echo komt terug via de schakelaar naar de ontvanger</figcaption></figure>
+    <p><strong>Zo werkt het:</strong> er wordt een hoogfrequente elektromagnetische golf opgewekt en in één richting uitgezonden. Die golf heeft een bepaalde lengte en een constante snelheid. De radar meet de <strong>tijd</strong> tussen uitzenden en terugkomen van de echo, en rekent daarmee de <strong>afstand</strong> uit. De <strong>richting (peiling)</strong> volgt uit de stand van de antenne op het moment dat de echo binnenkomt.</p>`},
+  {type:'q', q:"Hoe bepaalt een radar de afstand tot een object?", o:["Door de tijd te meten tussen het uitzenden van de puls en het terugkomen van de echo","Door de sterkte van de echo te meten","Door de stand van de antenne af te lezen","Door de frequentie van de echo te vergelijken"], a:0, w:"De tijd tussen uitzenden en ontvangen bepaalt de afstand. De antennestand bepaalt de richting (peiling)."},
+  {type:'q', q:"Welke van deze is géén van de vier hoofdonderdelen van een radarinstallatie?", o:["Het gyrokompas","De zender","De ontvanger","Het scherm (display)"], a:0, w:"De vier hoofdonderdelen zijn zender, antenne (scanner), ontvanger en scherm."},
+
+  {type:'info', h:"Radargolven: karakter en snelheid", html:`
+    <p>Een radargolf is een <strong>elektromagnetische golf</strong>. Hij bestaat uit een elektrisch en een magnetisch deel die <strong>loodrecht op elkaar</strong> staan.</p>
+    <ul><li>Magnetisch deel verticaal: <strong>verticaal gepolariseerd</strong></li><li>Magnetisch deel horizontaal: <strong>horizontaal gepolariseerd</strong></li></ul>
+    <p>Radargolven gaan met de <strong>snelheid van het licht</strong>:</p>
+    <div class="tbl"><table><tr><th>Snelheid</th></tr><tr><td>300.000 km/s</td></tr><tr><td>300.000.000 m/s</td></tr><tr><td>300 m/µs</td></tr></table></div>
+    <div class="key">Onthoud vooral <span class="mono">300 meter per microseconde</span>. Daarmee reken je alles uit over pulsen en afstanden.</div>`},
+  {type:'q', q:"Met welke snelheid planten radargolven zich voort?", o:["300.000 km/s (300 m/µs)","300 km/s","343 m/s (geluidssnelheid)","30.000 km/s"], a:0, w:"Radargolven gaan met de lichtsnelheid: 300.000 km/s, oftewel 300 meter per microseconde."},
+
+  {type:'info', h:"Golflengte en frequentie", html:`
+    <p><strong>Golflengte</strong> is de afstand tussen twee opeenvolgende toppen van een sinusvormige golf. Het symbool is de Griekse letter <strong>λ</strong> (lambda). De hoogte van de golf heet de amplitude (sterkte).</p>
+    <figure class="fig">${svgWave()}<figcaption>Golflengte λ = afstand tussen twee toppen</figcaption></figure>
+    <p>De golflengte bepaalt mede de kwaliteit van het radarbeeld. Een rivierradar gebruikt een golflengte van <strong>≤ 3,2 cm</strong>.</p>
+    <p><strong>Frequentie</strong> is het aantal golflengtes (oscillaties) dat per seconde een punt passeert. De eenheid is <strong>hertz (Hz)</strong>.</p>
+    <div class="tbl"><table><tr><th>Per seconde</th><th>Eenheid</th></tr><tr><td>1</td><td>1 Hz</td></tr><tr><td>1.000</td><td>1 kHz</td></tr><tr><td>1.000.000</td><td>1 MHz</td></tr><tr><td>1.000.000.000</td><td>1 GHz</td></tr></table></div>
+    <div class="key">De frequentie van een rivierradar ligt tussen <span class="mono">9300 MHz</span> en <span class="mono">9500 MHz</span>.</div>`},
+  {type:'q', q:"Wat is de golflengte van een rivierradar?", o:["Kleiner dan of gelijk aan 3,2 cm","Ongeveer 10 cm","Precies 1 meter","Ongeveer 32 cm"], a:0, w:"Rivierradars gebruiken een golflengte van ≤ 3,2 cm."},
+  {type:'q', q:"Wat is de frequentie van een rivierradar?", o:["Tussen 9300 en 9500 MHz","Tussen 156 en 162 MHz","Tussen 2900 en 3100 MHz","Tussen 300 en 500 kHz"], a:0, w:"Een rivierradar werkt tussen 9300 en 9500 MHz. (156–162 MHz is de marifoonband.)"},
+
+  {type:'info', h:"De radarpuls", html:`
+    <p>Een <strong>radarpuls</strong> is een uitgezonden radiogolf met een bepaalde tijdsduur of lengte. De <strong>pulsduur</strong> staat in de handleiding in <strong>microseconden (µs)</strong>: een miljoenste seconde.</p>
+    <p>Omdat de golf 300 m/µs aflegt, hoort bij elke pulsduur een <strong>pulslengte</strong> in meters:</p>
+    <div class="tbl"><table><tr><th>Pulsduur</th><th>Pulslengte</th></tr><tr><td>1 µs</td><td>300 m</td></tr><tr><td>0,1 µs</td><td>30 m</td></tr><tr><td>0,05 µs</td><td>15 m</td></tr><tr><td>0,01 µs</td><td>3 m</td></tr></table></div>
+    <p>Bij een pulsduur van 0,1 µs is het begin van de puls al 30 meter van de antenne als de uitzending stopt.</p>
+    <p>Een binnenvaartradar moet doelen dichtbij goed zien en heeft daarom een korte puls, bijvoorbeeld <strong>≤ 0,05 µs (15 m)</strong> voor bereiken tot 2000 meter.</p>
+    <div class="key">ES-TRIN eis: de kleinste af te beelden afstand is <strong>ten hoogste 15 m</strong>.</div>`},
+  {type:'q', q:"Een radar zendt een puls van 0,05 µs uit. Hoe lang is die puls in meters?", o:["15 meter","5 meter","30 meter","150 meter"], a:0, w:"0,05 µs × 300 m/µs = 15 meter."},
+  {type:'q', q:"Met welke eenheid wordt de pulsduur aangegeven?", o:["Microseconden (µs)","Hertz (Hz)","Meters (m)","Kilowatt (kW)"], a:0, w:"Pulsduur is een tijd en wordt in microseconden (µs) aangegeven. Pulslengte is de bijbehorende afstand in meters."},
+
+  {type:'info', h:"Pulsherhalingsfrequentie", html:`
+    <p>De <strong>pulsherhalingsfrequentie</strong> is het <strong>aantal keren per seconde</strong> dat een puls wordt uitgezonden. Die wordt mede bepaald door de <strong>draaisnelheid van de antenne</strong> en het <strong>gekozen bereik</strong>.</p>
+    <p>Een object moet meerdere keren achter elkaar getroffen worden om een goede echo te geven. Draait de antenne snel en is de pulsherhalingsfrequentie laag, dan wordt het object te weinig geraakt.</p>
+    <p>Elke uitzending belast de <strong>magnetron</strong> zwaar. Die heeft rust nodig om af te koelen. Daarom geldt: <strong>langere puls = lagere pulsherhalingsfrequentie</strong>.</p>
+    <div class="tbl"><table><tr><th>Bereik</th><th>Pulsduur</th><th>Herhalingsfreq.</th></tr><tr><td>1,2 km</td><td>0,04 µs</td><td>4000 Hz</td></tr><tr><td>8 km</td><td>0,3 µs</td><td>2000 Hz</td></tr><tr><td>16 km</td><td>0,6 µs</td><td>1000 Hz</td></tr></table></div>
+    <p>Eén pulsherhalingsperiode bestaat uit de <strong>ontvangsttijd</strong> en een <strong>dode tijd</strong>.</p>`},
+  {type:'q', q:"Wat gebeurt er met de pulsherhalingsfrequentie als je een langere puls kiest?", o:["Die neemt af","Die neemt toe","Die blijft gelijk","Die wordt nul"], a:0, w:"Een langere puls belast de magnetron meer, dus er worden minder pulsen per seconde uitgezonden."},
+
+  {type:'info', h:"De scanner", html:`
+    <p>De scanner heeft <strong>drie functies</strong>:</p>
+    <ul><li>zenden met een gebundelde straal</li><li>ontvangen van een echo</li><li>peilen en het maken van de kiellijn</li></ul>
+    <p>De maximale aanwijsfout is <strong>1°</strong>.</p>
+    <p>De energie gaat uit in een <strong>smalle horizontale</strong> bundel (max <span class="mono">1,2°</span>) en een <strong>brede verticale</strong> bundel (max <span class="mono">30°</span>). De smalle horizontale bundel zorgt voor een nauwkeurige peiling en een echo die niet onnodig breed wordt.</p>
+    <div class="key">Bundelhoek (°) = <span class="mono">70 × golflengte (cm) ÷ antennelengte (cm)</span><br>Voorbeeld: 70 × 3,2 ÷ 180 = <strong>1,2°</strong></div>
+    <p><strong>Hoe langer de scanner, hoe smaller de bundel.</strong> ES-TRIN eist een scanner van minimaal <strong>1,80 m</strong>. Leverbaar zijn 6, 7, 8 en 9 voet (180, 210, 240 en 270 cm). Voor kleinere vaarwegen is een langere scanner aan te raden.</p>`},
+  {type:'q', q:"Wat zijn de maximale bundelhoeken van een binnenvaartradar?", o:["Horizontaal 1,2° en verticaal 30°","Horizontaal 30° en verticaal 1,2°","Horizontaal 1° en verticaal 20°","Horizontaal 5° en verticaal 15°"], a:0, w:"Smalle horizontale bundel (max 1,2°) en brede verticale bundel (max 30°)."},
+  {type:'q', q:"Een scanner is 240 cm lang (golflengte 3,2 cm). Wat is de horizontale bundelhoek ongeveer?", o:["0,93°","1,2°","1,5°","0,5°"], a:0, w:"70 × 3,2 ÷ 240 = 224 ÷ 240 ≈ 0,93°. Langere scanner, smallere bundel."},
+
+  {type:'info', h:"Kiellijn en opstelling van de scanner", html:`
+    <p>De <strong>kiellijn</strong> (KL) heet ook <strong>heading line</strong> (HL) of <strong>heading marker</strong> (HM). Hij wordt gemaakt met een <strong>contact in het scannerhuis</strong>, op het moment dat de scanner loodrecht op de lengteas van het schip staat en dus recht vooruit straalt. Moderne radars controleren dit automatisch.</p>
+    <p>De meeste scanners hebben een gesloten golfgeleider en een kunststof huis.</p>
+    <p><strong>Opstelling</strong> (ES-TRIN): de antenne komt <strong>zo dicht mogelijk boven de lengteas</strong> van het schip. In het stralingsbereik mogen geen objecten staan die valse echo's of schaduwen geven; zo nodig komt de antenne op het voorschip. Na correctie mag de afwijking tussen koerslijn en lengteas <strong>niet meer dan 1°</strong> zijn. Bij twee radars zet je de scanners niet op gelijke hoogte.</p>
+    <p><strong>Omwentelingen:</strong> minimaal <strong>24 per minuut</strong>. Snelle schepen kunnen kiezen voor 40 per minuut (niet verplicht). Hoe sneller de radar draait, hoe vloeiender het beeld.</p>`},
+  {type:'q', q:"Waar moet de radarscanner aan boord geplaatst worden?", o:["Zo dicht mogelijk boven de lengteas van het schip","Zo ver mogelijk naar bakboord","Altijd achter op het stuurhuis, ongeacht obstakels","Zo laag mogelijk op het achterschip"], a:0, w:"Zo dicht mogelijk boven de lengteas, vrij van objecten die valse echo's of schaduwen geven."},
+  {type:'q', q:"Hoeveel omwentelingen per minuut moet een goedgekeurde binnenvaartscanner minimaal maken?", o:["24","12","40","60"], a:0, w:"Minimaal 24 omwentelingen per minuut. 40 is een optie voor snelle schepen, maar niet verplicht."},
+
+  {type:'info', h:"Zenden, ontvangen en weergeven", html:`
+    <p>De zender zendt een korte, krachtige puls uit. Tijdens het zenden is de <strong>ontvanger gesloten</strong>, net als bij het simplex-systeem van de marifoon. Raakt de puls een object, dan kaatst een deel terug en verschijnt de echo op het scherm.</p>
+    <p>De <strong>zend-ontvangschakelaar</strong> blokkeert de ontvanger tijdens het zenden. De timing moet precies goed zijn:</p>
+    <ul><li>te <strong>korte</strong> blokkade: beschadiging van het <strong>mengkristal</strong></li><li>te <strong>lange</strong> blokkade: <strong>grotere dode zone</strong></li></ul>
+    <p>Zet in sluizen of bij hoge objecten met sterke reflecties de zender op <strong>stand-by</strong>. Kies bij regelbaar vermogen het laagste vermogen.</p>
+    <p>De <strong>modulator</strong> bouwt de spanning op. De <strong>magnetron</strong> is de eigenlijke zender en wekt de zeer hoogfrequente golf op. De zendpuls gaat via de kabel (vroeger de golfpijp) naar de antenne. Max zendvermogen rivierradar: <strong>5 kW</strong>. De voeding moet spanningsvariaties van <strong>±10%</strong> aankunnen.</p>
+    <div class="key"><strong>Rekenvoorbeeld</strong> (bereik 1200 m): een echo die na <span class="mono">4 µs</span> terug is: 4 × 300 = 1200 m heen én terug, dus het object ligt op <strong>600 m</strong>. Na 8 µs: 2400 ÷ 2 = 1200 m, de rand van het scherm.</div>
+    <p>De peiling komt van de antennestand. Antenne en tijdbasis lopen synchroon.</p>`},
+  {type:'q', q:"Een echo komt na 4 µs terug. Op welke afstand ligt het object?", o:["600 meter","1200 meter","300 meter","2400 meter"], a:0, w:"4 µs × 300 m = 1200 m heen en terug. Gedeeld door 2 is dat 600 m."},
+  {type:'q', q:"Wat is het gevolg als de zend-ontvangschakelaar de ontvanger te lang blokkeert?", o:["De dode zone wordt groter","Het mengkristal raakt beschadigd","Het bereik wordt groter","De kiellijn verdwijnt"], a:0, w:"Te lang: grotere dode zone. Te kort: beschadiging van het mengkristal."},
+
+  {type:'info', h:"Beeldweergave", html:`
+    <p>In de binnenvaart is <strong>HEAD-UP</strong> gebruikelijk: de kiellijn wijst naar de bovenkant van het scherm. In de zeevaart gebruikt men North-up en Course-up.</p>
+    <ul>
+      <li><strong>Head-up:</strong> gerefereerd aan de koerslijn, die altijd recht omhoog wijst. Werkt zonder andere sensoren dan de radar. Wat je door de ramen ziet, komt overeen met het scherm.</li>
+      <li><strong>North-up:</strong> gerefereerd aan het kompas, het noorden staat altijd boven. Lijkt op de kaart. Bij koerswijziging draait alleen de koerslijn.</li>
+      <li><strong>Course-up:</strong> als head-up, maar gerefereerd aan het kompas. De ingestelde koers staat boven en het beeld blijft stabiel bij scheepsbewegingen.</li>
+    </ul>`},
+  {type:'q', q:"Wat is een 'head-up' beeldinstelling?", o:["De kiellijn wijst altijd naar de bovenkant van het scherm","Het noorden staat altijd bovenaan","De ingestelde kompaskoers staat bovenaan","Het eigen schip staat altijd onderaan het scherm"], a:0, w:"Bij head-up wijst de kiellijn/koerslijn altijd naar boven. Het beeld komt overeen met wat je door de ramen ziet."},
+
+  {type:'info', h:"Radiaal (afstand) onderscheidend vermogen", html:`
+    <p>Liggen twee objecten <strong>achter elkaar in één lijn</strong> vanaf de antenne, dan komen hun echo's na elkaar binnen. De radar ziet ze alleen als twee aparte echo's als ze <strong>meer dan een halve pulslengte</strong> uit elkaar liggen. Liggen ze dichter bij elkaar, dan zie je één aaneengesloten echo.</p>
+    <div class="tbl"><table><tr><th>Pulsduur</th><th>Pulslengte</th><th>Gescheiden bij</th></tr>
+      <tr><td>0,04 µs</td><td>12 m</td><td>&gt; 6 m</td></tr><tr><td>0,05 µs</td><td>15 m</td><td>&gt; 7,5 m</td></tr><tr><td>0,1 µs</td><td>30 m</td><td>&gt; 15 m</td></tr><tr><td>0,25 µs</td><td>75 m</td><td>&gt; 37,5 m</td></tr><tr><td>0,5 µs</td><td>150 m</td><td>&gt; 75 m</td></tr><tr><td>1,0 µs</td><td>300 m</td><td>&gt; 150 m</td></tr></table></div>
+    <p>Daarom moet een radarreflector op een brugpijler <strong>meer dan een halve pulslengte</strong> van de pijler af hangen. Bij een puls van 0,1 µs is dat 15 meter.</p>
+    <div class="key">Bepalend voor het radiaal onderscheidend vermogen: de <strong>pulslengte</strong> (en dus het gekozen bereik).</div>
+    <p><strong>Eis:</strong> op bereiken tot 1200 m moeten twee standaardreflectoren op <strong>dezelfde peiling</strong> en <strong>15 m uit elkaar</strong>, overal tussen 15 en 1200 m, als twee aparte echo's worden weergegeven.</p>`},
+  {type:'q', q:"Twee boeien liggen achter elkaar in één lijn. De pulsduur is 0,1 µs. Vanaf welke onderlinge afstand zie je ze als twee echo's?", o:["Meer dan 15 meter","Meer dan 30 meter","Meer dan 7,5 meter","Meer dan 3 meter"], a:0, w:"0,1 µs = 30 m pulslengte. Ze moeten meer dan de helft, dus meer dan 15 m, uit elkaar liggen."},
+
+  {type:'info', h:"Horizontaal onderscheidend vermogen", html:`
+    <p>Het <strong>horizontaal (azimutaal) onderscheidend vermogen</strong> gaat over twee objecten <strong>naast elkaar</strong>, op dezelfde afstand.</p>
+    <div class="key"><strong>EU-norm:</strong> twee objecten op <span class="mono">1200 m</span>, aan weerszijden loodrecht op de peilrichting en <span class="mono">30 m</span> uit elkaar, moeten gescheiden op het scherm staan.</div>
+    <p>Dat lukt alleen als de horizontale bundelbreedte <strong>maximaal 1,2°</strong> is. Door de bundelbreedte geeft een object ver weg een <strong>bredere echo</strong> dan het echt is. Vallen twee objecten tegelijk binnen de bundel, dan ziet de radar één aaneengesloten echo.</p>
+    <p>Bepalend zijn dus de <strong>horizontale bundelbreedte</strong> (scannerlengte en golflengte) en de <strong>afstand</strong>.</p>`},
+  {type:'q', q:"Wat eist de EU-norm voor het horizontaal onderscheidend vermogen?", o:["Twee objecten op 1200 m die 30 m uit elkaar liggen, moeten gescheiden worden weergegeven","Twee objecten op 600 m die 15 m uit elkaar liggen, moeten gescheiden worden weergegeven","Twee objecten achter elkaar moeten meer dan een halve pulslengte uit elkaar liggen","De bundelbreedte mag maximaal 30° zijn"], a:0, w:"Norm: op 1200 m, 30 m uit elkaar, gescheiden zichtbaar. Dit vraagt een horizontale bundel van max 1,2°."},
+
+  {type:'info', h:"Dode zone, dode hoek en blinde sector", html:`
+    <p><strong>Dode zone:</strong> het gebied rondom de scanner waar <strong>geen echo's</strong> op het scherm komen. Zolang de zender uitzendt, kan er geen echo binnen. De straal is theoretisch de <strong>halve pulslengte</strong>.</p>
+    <div class="tbl"><table><tr><th>Bereik</th><th>Pulsduur</th><th>Pulslengte</th><th>Dode zone</th></tr>
+      <tr><td>16000 m</td><td>0,6 µs</td><td>180 m</td><td>90 m</td></tr><tr><td>8000 m</td><td>0,3 µs</td><td>90 m</td><td>45 m</td></tr><tr><td>4000 m</td><td>0,1 µs</td><td>30 m</td><td>15 m</td></tr><tr><td>1200 m</td><td>0,05 µs</td><td>15 m</td><td>7,5 m</td></tr></table></div>
+    <p><strong>Dode hoek:</strong> de ruimte vóór het schip die je vanuit het stuurhuis niet kunt overzien, door stuurlast, de opbouw van het voorschip of een hoge deklast. Ook de radar kan hier niet in kijken. De <strong>hoogte van de scanner</strong> is daarbij de meest bepalende factor. Verder spelen mee: de <strong>plaats van de radar</strong> (voor of achter), de <strong>stuurlast</strong>, de <strong>opbouw van het voorschip</strong> en de <strong>deklast</strong>. Containerschepen zetten daarom vaak ook een scanner op het voorschip.</p>
+    <div class="key">Dode hoek = <span class="mono">hoogte voorschip × afstand roerganger–voorschip ÷ (hoogte roerganger − hoogte voorschip)</span></div>
+    <p><strong>Blinde sector:</strong> door de verticale bundel (max 30°) wordt een stuk vlak bij het schip niet aangestraald. Objecten daar zie je niet op de radar. Een hogere scanner of slagzij maakt de blinde afstand groter.</p>`},
+  {type:'q', q:"Wat bepaalt de grootte van de dode zone?", o:["De pulslengte (straal ≈ halve pulslengte)","De lengte van de scanner","De hoogte van de deklast","De draaisnelheid van de antenne"], a:0, w:"De dode zone heeft een straal van ongeveer een halve pulslengte. Een ander bereik (andere puls) geeft een andere dode zone."},
+  {type:'q', q:"Wat is de meest bepalende factor voor de dode hoek van de radar?", o:["De hoogte van de scanner","De pulsduur","De frequentie","Het zendvermogen"], a:0, w:"De hoogte van de scanner, het oog van de radar, bepaalt het meest hoe groot de dode hoek is."},
+
+  {type:'info', h:"TFT-scherm, Inland ECDIS en ENC", html:`
+    <p>Een moderne radar heeft een <strong>kleuren TFT-scherm</strong>. ES-TRIN eist: <strong>portretformaat</strong>, korte kant minimaal <strong>270 mm</strong>.</p>
+    <p><strong>Inland ECDIS</strong> (Electronic Chart Display and Information System) toont elektronische vaarkaarten volgens de S57 Inland ECDIS-standaard. Het combineren van kaart en radarbeeld heet <strong>overlay</strong>.</p>
+    <ul>
+      <li><strong>Informatiemodus:</strong> een elektronische atlas voor oriëntatie. <strong>Niet</strong> bedoeld om op te navigeren.</li>
+      <li><strong>Navigatiemodus:</strong> het radarbeeld ligt over de kaart. Vereist een type-goedgekeurd systeem, een nauwkeurige doorlopende positiebepaling en een <strong>radarpatent</strong>.</li>
+    </ul>
+    <div class="key"><strong>LET OP:</strong> overlay mag bij slecht zicht <strong>alleen in navigatiemodus</strong> gebruikt worden.</div>
+    <p>Een <strong>ENC</strong> (Electronic Navigational Chart) is een <strong>vectorkaart</strong>: alle elementen staan apart in lagen, die je aan of uit kunt zetten. Verplichte onderdelen: ENC-data, standaard kleuren en symbolen, positie van het schip, schaalwijziging met waarschuwingen, en dieptecijfers. Bronnen: GPS, gyrokompas, snelheid en radar.</p>
+    <p>Actuele informatie komt van de <strong>RIS</strong>-server (River Information Services), sinds 2005 operationeel. Gratis ECDIS-cellen voor Nederland via <span class="mono">vaarweginformatie.nl</span> (FIS).</p>`},
+  {type:'q', q:"In welke ECDIS-modus mag overlay bij slecht zicht gebruikt worden?", o:["Alleen in navigatiemodus","Alleen in informatiemodus","In beide modi","Overlay is bij slecht zicht nooit toegestaan"], a:0, w:"Bij slecht zicht mag overlay alleen in navigatiemodus. Zo word je niet afgeleid door te veel informatie."},
+  {type:'q', q:"Wat is een ENC?", o:["Een officiële elektronische vectorkaart waarin elementen apart in lagen zijn opgeslagen","Een gescande papieren kaart (rasterkaart)","Een radarbeeld zonder kaart","Een marifoonkanaal voor verkeersinformatie"], a:0, w:"ENC = Electronic Navigational Chart, een vectorkaart. Een gescande kaart is een rasterkaart (RNC)."}
+  ],
+  test:[
+    {q:"Hoe bepaalt een radar de afstand tot een object?", o:["Door de tijd te meten tussen uitzenden en ontvangen van de echo","Door de sterkte van de echo","Door de antennestand","Door de frequentie van de echo"], a:0, w:"Tijd tussen uitzenden en ontvangen geeft de afstand."},
+    {q:"Met welke snelheid planten radargolven zich voort?", o:["300 m/µs","300 km/s","343 m/s","3.000 m/µs"], a:0, w:"Lichtsnelheid: 300.000 km/s = 300 m/µs."},
+    {q:"Wat wordt verstaan onder 'golflengte'?", o:["De afstand tussen twee opeenvolgende toppen van een sinusvormige golf","Het aantal golven per seconde","De hoogte van de golf","De duur van één puls"], a:0, w:"Golflengte (λ) = afstand tussen twee opeenvolgende toppen."},
+    {q:"Wat is de golflengte van een rivierradar?", o:["≤ 3,2 cm","≥ 10 cm","Ongeveer 1 m","3,2 mm"], a:0, w:"≤ 3,2 cm."},
+    {q:"Wat wordt verstaan onder 'frequentie'?", o:["Het aantal golflengtes (oscillaties) dat per seconde een punt passeert","De afstand tussen twee toppen","Het aantal omwentelingen van de scanner","Het aantal pulsen per minuut"], a:0, w:"Frequentie = oscillaties per seconde, in hertz."},
+    {q:"Met welke eenheid wordt frequentie aangeduid?", o:["Hertz (Hz)","Microseconde (µs)","Watt (W)","Meter (m)"], a:0, w:"Hertz."},
+    {q:"Wat is de frequentie van een rivierradar?", o:["9300–9500 MHz","156–162 MHz","2900–3100 MHz","1–2 GHz"], a:0, w:"9300–9500 MHz."},
+    {q:"Wat wordt verstaan onder 'pulsduur'?", o:["De tijd dat één radarpuls wordt uitgezonden","Het aantal pulsen per seconde","De afstand die de puls aflegt tot het object","De tijd tussen twee omwentelingen"], a:0, w:"Pulsduur is de tijdsduur van één puls, in µs."},
+    {q:"Wat betekent 'pulslengte'?", o:["De lengte in meters van de uitgezonden puls (pulsduur × 300 m/µs)","De tijd tussen twee pulsen","De lengte van de scanner","Het maximale bereik"], a:0, w:"Pulslengte = pulsduur × 300 m/µs, bijvoorbeeld 0,1 µs = 30 m."},
+    {q:"Wat wordt verstaan onder 'pulsherhalingsfrequentie'?", o:["Het aantal keren per seconde dat een puls wordt uitgezonden","Het aantal omwentelingen per minuut","De frequentie van de radargolf","Het aantal echo's per seconde"], a:0, w:"Aantal pulsen per seconde."},
+    {q:"Welke factoren bepalen mede de pulsherhalingsfrequentie?", o:["De draaisnelheid van de antenne en het gekozen bereik","De golflengte en de polarisatie","De hoogte en de lengte van de scanner","Het weer en de waterstand"], a:0, w:"Draaisnelheid van de antenne en het gekozen bereik."},
+    {q:"Wat zijn de drie functies van de scanner?", o:["Zenden met gebundelde straal, ontvangen van de echo, peilen en maken van de kiellijn","Zenden, versterken en weergeven","Ontvangen, filteren en opslaan","Zenden, koelen en draaien"], a:0, w:"Zenden, ontvangen, peilen/kiellijn."},
+    {q:"Waar moet een scanner aan boord geplaatst worden?", o:["Zo dicht mogelijk boven de lengteas","Aan bakboordzijde van het stuurhuis","Zo laag mogelijk","Op het achterschip achter de schoorsteen"], a:0, w:"Zo dicht mogelijk boven de lengteas, vrij van obstakels."},
+    {q:"Wat is de maximale gradenboog van de horizontale en verticale bundel?", o:["Horizontaal 1,2°, verticaal 30°","Horizontaal 30°, verticaal 1,2°","Horizontaal 2°, verticaal 20°","Horizontaal 1°, verticaal 10°"], a:0, w:"1,2° horizontaal, 30° verticaal."},
+    {q:"Hoe komt de kiellijn op het beeldscherm tot stand?", o:["Via een contact in het scannerhuis op het moment dat de scanner loodrecht op de lengteas staat","Via de GPS-ontvanger","Via het gyrokompas","Door een echo van de eigen boeg"], a:0, w:"Een contact in het scannerhuis geeft de kiellijn, als de scanner loodrecht op de lengteas staat."},
+    {q:"Hoe wordt de echo op de juiste plaats op het scherm geplaatst?", o:["Richting via de antennestand t.o.v. de kiellijn, afstand via de gemeten tijd","Alleen via de GPS-positie","Via de sterkte van de echo","Via de pulsherhalingsfrequentie"], a:0, w:"Richting = scannerstand ten opzichte van de kiellijn. Afstand = tijd tussen uitzenden en ontvangen."},
+    {q:"Wat is een 'head-up' beeldinstelling?", o:["De kiellijn wijst altijd naar boven op het scherm","Het noorden staat altijd boven","De koers uit het kompas staat boven","Het schip staat in het midden en draait mee"], a:0, w:"Head-up: kiellijn naar boven."},
+    {q:"Wat wordt bedoeld met radiaal (afstand) onderscheidend vermogen?", o:["Het vermogen om twee objecten die achter elkaar in één lijn liggen als twee echo's te tonen","Het vermogen om twee objecten naast elkaar gescheiden te tonen","Het maximale bereik van de radar","De nauwkeurigheid van de peiling"], a:0, w:"Twee objecten achter elkaar in dezelfde richting gescheiden kunnen zien."},
+    {q:"Aan welke eis moet een binnenvaartradar voldoen voor het radiaal onderscheidend vermogen?", o:["Twee reflectoren op dezelfde peiling, 15 m uit elkaar, tussen 15 en 1200 m gescheiden tonen","Twee reflectoren op dezelfde peiling, 30 m uit elkaar, tussen 30 en 2000 m gescheiden tonen","Twee reflectoren naast elkaar, 15 m uit elkaar, op 1200 m gescheiden tonen","Twee reflectoren op dezelfde peiling, 5 m uit elkaar, tussen 5 en 800 m gescheiden tonen"], a:0, w:"Op bereiken tot 1200 m: 15 m achter elkaar op dezelfde peiling, overal tussen 15 en 1200 m gescheiden."},
+    {q:"Welke factor is bepalend voor het radiaal onderscheidend vermogen?", o:["De pulslengte","De scannerlengte","De verticale bundelhoek","De schermgrootte"], a:0, w:"De pulslengte: objecten moeten meer dan een halve pulslengte uit elkaar liggen."},
+    {q:"Bij een pulsduur van 0,05 µs: vanaf welke afstand achter elkaar zie je twee aparte echo's?", o:["Meer dan 7,5 m","Meer dan 15 m","Meer dan 30 m","Meer dan 5 m"], a:0, w:"0,05 µs = 15 m pulslengte. De helft is 7,5 m."},
+    {q:"Wat wordt bedoeld met horizontaal (azimutaal) onderscheidend vermogen?", o:["Het vermogen om twee objecten naast elkaar op gelijke afstand gescheiden te tonen","Het vermogen om twee objecten achter elkaar te scheiden","Het vermogen om hoge objecten te zien","De draaisnelheid van de scanner"], a:0, w:"Twee objecten naast elkaar, op dezelfde afstand, gescheiden zien."},
+    {q:"Welke factoren zijn bepalend voor het horizontaal onderscheidend vermogen?", o:["De horizontale bundelbreedte (scannerlengte en golflengte) en de afstand","De pulslengte en de pulsherhalingsfrequentie","Het zendvermogen en de voeding","De verticale bundel en de scannerhoogte"], a:0, w:"Bundelbreedte (bepaald door scannerlengte en golflengte) en afstand."},
+    {q:"Aan welke eis moet een binnenvaartradar voldoen voor het horizontaal onderscheidend vermogen?", o:["Twee objecten op 1200 m, 30 m uit elkaar, gescheiden weergeven","Twee objecten op 1200 m, 15 m uit elkaar, gescheiden weergeven","Twee objecten op 600 m, 30 m uit elkaar, gescheiden weergeven","Objecten op minimaal 15 m afbeelden"], a:0, w:"1200 m afstand, 30 m uit elkaar."},
+    {q:"Wat is volgens ES-TRIN de minimale lengte van een scanner?", o:["1,80 m","1,20 m","2,70 m","0,90 m"], a:0, w:"Minimaal 1,80 m (6 voet)."},
+    {q:"Wat wordt bedoeld met de 'dode zone'?", o:["Het gebied rondom de scanner waarvan geen echo's op het scherm komen","De ruimte vóór het schip die je vanuit het stuurhuis niet ziet","Het gebied achter een hoog object","Het gebied buiten het ingestelde bereik"], a:0, w:"Gebied rond de scanner zonder echo's, straal ≈ halve pulslengte."},
+    {q:"Hoe groot is de dode zone bij een bereik van 4000 m en een pulsduur van 0,1 µs?", o:["15 m","30 m","7,5 m","45 m"], a:0, w:"0,1 µs = 30 m pulslengte, dode zone = halve pulslengte = 15 m."},
+    {q:"Wat wordt bedoeld met de 'dode hoek'?", o:["De ruimte vóór het schip die je vanuit het stuurhuis niet kunt overzien","Het gebied rond de scanner zonder echo's","De hoek tussen kiellijn en noorden","De maximale aanwijsfout van 1°"], a:0, w:"De ruimte vóór het schip die je niet overziet door stuurlast, opbouw of deklast."},
+    {q:"Wat bepaalt vooral de grootte van de dode hoek van de radar?", o:["De hoogte van de scanner","De pulsduur","De draaisnelheid","Het zendvermogen"], a:0, w:"De hoogte van de scanner."},
+    {q:"Welke factoren hebben invloed op de dode hoek?", o:["Hoogte en plaats van de radar, stuurlast, opbouw voorschip en deklast","Pulslengte, gain en tune","Bereik, ringafstand en helderheid","Golflengte, frequentie en zendvermogen"], a:0, w:"Hoogte en plaats (voor/achter) van de radar, stuurlast, opbouw van het voorschip en deklast."},
+    {q:"Wat is het maximale zendvermogen van een rivierradar?", o:["5 kW","25 kW","1 kW","50 kW"], a:0, w:"5 kW."},
+    {q:"Welk onderdeel is de eigenlijke zender die de hoogfrequente golf opwekt?", o:["De magnetron","De modulator","Het mengkristal","De synchronisatie-eenheid"], a:0, w:"De magnetron. De modulator bouwt alleen de spanning op."},
+    {q:"Wanneer mag overlay (radar over ECDIS-kaart) bij slecht zicht worden gebruikt?", o:["Alleen in navigatiemodus","Alleen in informatiemodus","Altijd","Nooit"], a:0, w:"Alleen in navigatiemodus."}
+  ]},
+{ id:2, title:"Bediening", sub:"Radar inschakelen, gain, STC, FTC, VRM, EBL en meer",
+  steps:[
+  {type:'info', h:"Het bedieningspaneel", html:`
+    <p>Elk radartype wordt net iets anders bediend. Het boek gebruikt als voorbeeld de radar in de simulator. De belangrijkste knoppen:</p>
+    <div class="tbl"><table><tr><th>Knop</th><th>Betekenis</th></tr>
+      <tr><td>STBY</td><td>Standby</td></tr><tr><td>TX</td><td>Transmit (zenden)</td></tr>
+      <tr><td>GAIN</td><td>Versterking</td></tr><tr><td>RAIN</td><td>FTC, neerslagonderdrukker</td></tr>
+      <tr><td>SEA</td><td>STC, golfslagonderdrukker</td></tr><tr><td>TUNE</td><td>Afstemmen</td></tr>
+      <tr><td>BRILL</td><td>Brilliance (helderheid)</td></tr><tr><td>DAY/NIGHT</td><td>Kleurinstelling</td></tr>
+      <tr><td>HL OFF</td><td>Kiellijn tijdelijk weg</td></tr><tr><td>RANGE</td><td>Bereik</td></tr>
+      <tr><td>RR</td><td>Vaste ringen aan/uit</td></tr><tr><td>VRM</td><td>Variabele afstandsring</td></tr>
+      <tr><td>EBL</td><td>Elektronische peilingslijn</td></tr><tr><td>P-LINE</td><td>Navigatielijn</td></tr>
+      <tr><td>OFF CENT</td><td>Decentreren</td></tr><tr><td>TRAIL</td><td>Nalichtspoor</td></tr>
+      <tr><td>OWN MARK</td><td>Vorm eigen schip</td></tr><tr><td>OWN VECT</td><td>Voorspelde koers</td></tr>
+      <tr><td>PANEL</td><td>Verlichting paneel</td></tr><tr><td>ALARM ACK</td><td>Alarm accepteren</td></tr></table></div>
+    <div class="key">Let op de twee onderdrukkers: <strong>RAIN = FTC</strong> (neerslag) en <strong>SEA = STC</strong> (golfslag).</div>`},
+  {type:'q', q:"Welke knop is de golfslagonderdrukker (STC)?", o:["SEA","RAIN","GAIN","TUNE"], a:0, w:"SEA = STC, de golfslagonderdrukker. RAIN = FTC, de neerslagonderdrukker."},
+
+  {type:'info', h:"Radar in bedrijf stellen", html:`
+    <p>Wen jezelf een vast patroon van controles aan <strong>vóór het inschakelen</strong>:</p>
+    <ul><li>Kan de antenne vrij ronddraaien?</li><li>Staan <strong>gain</strong>, <strong>regenonderdrukker (FTC)</strong> en <strong>golfslagonderdrukker (STC)</strong> uit?</li></ul>
+    <p>Druk dan op <strong>STBY</strong>. De opwarmtijd begint: de <strong>magnetron</strong> wordt opgewarmd. Volgens de eisen moet de radar <strong>binnen 4 minuten</strong> operationeel zijn (de simulator binnen 1,5 minuut).</p>
+    <p>Wacht tot de indicatie <span class="mono">PREHEAT</span> verandert in <span class="mono">STANDBY</span>. Dan staat de radar op <strong>standby</strong>: het scherm is aan, maar de magnetron zendt nog niet.</p>`},
+  {type:'q', q:"Binnen hoeveel tijd moet een radar na inschakelen operationeel zijn?", o:["4 minuten","1 minuut","10 minuten","30 seconden"], a:0, w:"De eis is uiterlijk 4 minuten. De simulator is al binnen 1,5 minuut klaar."},
+  {type:'q', q:"Wat gebeurt er in de standby-stand?", o:["Het scherm staat aan, de magnetron zendt niet","De magnetron zendt, het scherm staat uit","De radar zendt op laag vermogen","De radar staat helemaal uit"], a:0, w:"In standby is het scherm aan maar wordt de magnetron niet geactiveerd. Er wordt dus niet uitgezonden."},
+
+  {type:'info', h:"Opstarten: de volgorde", html:`
+    <p>Na de opwarmtijd:</p>
+    <ul>
+      <li><strong>TX</strong> (zenden) activeren. Linksboven verschijnt <span class="mono">TRANSMIT</span>.</li>
+      <li><strong>Gain</strong> opdraaien tot de echo's goed zichtbaar zijn en er beeldruis ontstaat.</li>
+      <li>Controleren of <strong>Tune</strong> op <span class="mono">A</span> (automatisch) staat. Staat er <span class="mono">M</span>, druk dan op de Tune-knop tot er A staat.</li>
+      <li><strong>FTC</strong> zover opendraaien dat de ruis net verdwijnt.</li>
+      <li>Het gewenste <strong>bereik</strong> kiezen, passend bij de vaarweg en de vaarsnelheid.</li>
+      <li>Beeld bijregelen naar de omstandigheden, eventueel met <strong>STC</strong>; zo nodig met FTC opschonen.</li>
+    </ul>
+    <div class="key">Afstemmen met de hand: zoek een kleine echo aan de rand van het scherm en draai de afstemknop tot die echo het sterkst is.</div>`},
+  {type:'q', q:"Wat doe je direct na het activeren van TX (zenden)?", o:["Gain opdraaien tot echo's zichtbaar zijn en er beeldruis ontstaat","STC volledig opendraaien","Het kleinste bereik kiezen","De kiellijn uitschakelen"], a:0, w:"Na TX draai je de gain op tot de echo's goed zichtbaar zijn en er net beeldruis ontstaat."},
+
+  {type:'info', h:"Pulslengte kiezen", html:`
+    <p>Je kunt kiezen tussen een <strong>korte</strong> en een <strong>lange</strong> puls (short, medium, long). Op de simulator gaat dat automatisch: van 0,3 tot 2 km een korte puls (bijvoorbeeld 0,04 µs), vanaf 2 km een langere puls.</p>
+    <p>De pulslengte is gekoppeld aan het bereik en beïnvloedt:</p>
+    <ul><li>de <strong>grootte van de echo's</strong></li><li>de <strong>grootte van de dode zone</strong></li><li>het <strong>afstand onderscheidend vermogen</strong></li></ul>
+    <p>Een <strong>langere puls</strong> geeft een betrouwbaardere detectie, maar minder onderscheidend vermogen: twee schepen dicht achter elkaar worden één echo. Met de <strong>korte puls</strong> onderscheid je beter.</p>
+    <div class="key">Op bereiken <strong>tot 2000 meter moet</strong> de radar de korte puls gebruiken.</div>`},
+  {type:'q', q:"Tot welk bereik moet de radar de korte puls gebruiken?", o:["Tot 2000 meter","Tot 800 meter","Tot 4 km","Tot 8 km"], a:0, w:"Op de kleine bereiken tot 2000 m moet de korte puls gebruikt worden."},
+  {type:'q', q:"Je schakelt over van korte naar lange puls. Wat is een gevolg?", o:["De dode zone wordt groter","Het onderscheidend vermogen verbetert","De echo's worden kleiner","De dode zone verdwijnt"], a:0, w:"Langere puls: grotere echo's, grotere dode zone en slechter afstand onderscheidend vermogen."},
+
+  {type:'info', h:"Tune, brilliance en gain", html:`
+    <p><strong>Tune (afstemming)</strong> stemt de frequentie van de ontvanger goed af. Is de radar slecht afgestemd, dan verdwijnen de <strong>zwakke echo's</strong>. Het beeld lijkt dan mooi, maar het klopt niet. Fabrikanten adviseren af te stemmen op het <strong>grootste bereik</strong> (32 km): daar werk je met een lange puls en slaat de afstemindicatie het verst uit. De afstemindicatie reageert op de echosterkte; op ruim water met weinig echo's is de uitslag klein.</p>
+    <p><strong>Brilliance</strong> regelt hoe fel het radarbeeld oplicht. De dag/nacht-schakelaar regelt de helderheid van alleen de echo's. Te weinig helderheid laat <strong>kleine echo's verdwijnen</strong>. Te veel helderheid laat het beeld <strong>gloeien en uitsmeren</strong>.</p>
+    <p><strong>Gain (versterking)</strong> regelt de versterking van het echosignaal en daarmee de zichtbaarheid. Te ver open geeft veel ruis; dat laat wel zien dat de magnetron werkt.</p>
+    <div class="key">Gain te hoog: veel stoorecho's van regen en golfslag, en echo's die dicht bij elkaar liggen <strong>vloeien in elkaar</strong>. Dat heet een <strong>te vet</strong> beeld.</div>`},
+  {type:'q', q:"Wat is het nadeel van een te hoge gain?", o:["Een te vet beeld met stoorecho's en ineenvloeiende echo's","Zwakke echo's verdwijnen helemaal","De magnetron raakt oververhit","De kiellijn valt weg"], a:0, w:"Te hoge gain: veel stoorecho's, echo's vloeien in elkaar, slechtere onderscheiding. Een te vet beeld."},
+  {type:'q', q:"Wat gebeurt er als de radar niet goed is afgestemd (tune)?", o:["Zwakke echo's verdwijnen, terwijl het beeld er goed uitziet","Het hele scherm wordt wit van de ruis","De afstandsringen kloppen niet meer","De radar schakelt naar standby"], a:0, w:"Bij verkeerde afstemming verdwijnen de zwakke echo's. Je krijgt de indruk van een mooi beeld, maar het is niet juist."},
+
+  {type:'info', h:"STC en FTC", html:`
+    <p>De radar heeft twee onderdrukkers om storing weg te werken:</p>
+    <ul>
+      <li><strong>STC</strong>, de <strong>golfslagonderdrukker</strong> (knop SEA, sea clutter): tegen stoorecho's van golven.</li>
+      <li><strong>FTC</strong>, de <strong>neerslagonderdrukker</strong> (knop RAIN, rain clutter): tegen stoorecho's van regen en sneeuw, en om het beeld op te schonen.</li>
+    </ul>
+    <p><strong>STC</strong> staat voor <strong>Sensitivity Time Control</strong> (tijdsafhankelijke versterkingsregelaar). De werking is <strong>maximaal in het midden</strong> van het scherm en neemt af naar de rand. Gebruik STC dus <strong>niet</strong> om stoorecho's aan de rand van het scherm weg te halen.</p>
+    <div class="key">De effectieve werking van de STC op een binnenvaartradar is <strong>tot 1200 meter</strong>.</div>
+    <p><strong>FTC</strong> staat voor <strong>Fast Time Constant</strong>. Bewolking, regen of sneeuw geven nevelachtige echo's. De FTC werkt altijd over het <strong>gehele beeld</strong>: alle echo's worden iets schraler (scherper). Sterke echo's blijven zichtbaar, stoorecho's verdwijnen. Draai je de FTC helemaal open, dan verdwijnen <strong>alle</strong> echo's. Bij zware neerslag lukt onderdrukken soms niet meer.</p>
+    <p>De FTC gebruik je ook om het <strong>stoorveld achter een brug</strong> (indirecte echo's) te verminderen. Ook dan wordt het beeld dunner.</p>
+    <div class="key">Bij de start staan <strong>STC en FTC allebei uit</strong>.</div>`},
+  {type:'q', q:"Welke onderdrukker gebruik je bij stoorecho's van regen?", o:["FTC (RAIN)","STC (SEA)","Gain","Brilliance"], a:0, w:"FTC is de neerslagonderdrukker (RAIN). STC is voor golfslag (SEA)."},
+  {type:'q', q:"Tot welke afstand werkt de STC effectief op een binnenvaartradar?", o:["Tot 1200 meter","Over het hele scherm","Tot 300 meter","Tot 4 km"], a:0, w:"STC werkt vanuit het midden en is effectief tot 1200 m. De FTC werkt over het hele beeld."},
+
+  {type:'info', h:"Afstandsringen en bereik", html:`
+    <p>Het <strong>bereik</strong> (range) is de afstand van het <strong>middelpunt</strong> van het scherm (de scanner) tot de <strong>rand</strong>. De afstand tussen de vaste ringen hangt af van het bereik:</p>
+    <div class="tbl"><table><tr><th>Bereik</th><th>Ringafstand</th></tr>
+      <tr><td>300 m</td><td>100 m</td></tr><tr><td>500 m</td><td>100 m</td></tr><tr><td>800 m</td><td>200 m</td></tr><tr><td>1200 m</td><td>200 m</td></tr><tr><td>1600 m</td><td>400 m</td></tr><tr><td>2000 m</td><td>400 m</td></tr><tr><td>4 km</td><td>1 km</td></tr><tr><td>8 km</td><td>2 km</td></tr><tr><td>16 km</td><td>4 km</td></tr><tr><td>32 km</td><td>8 km</td></tr></table></div>
+    <p>Het snijpunt van kiellijn en ringen helpt om <strong>gelijkmatig door een bocht</strong> te varen. Controleer regelmatig: is het juiste aantal ringen er, klopt de onderlinge afstand, zijn ze mooi rond, loopt de laatste ring langs de rand?</p>
+    <p>Vaste ringen zet je aan/uit met <strong>RR</strong>. De ringhelderheid stel je in via het <strong>menu</strong> en die moet <strong>terug te draaien zijn tot nul</strong>.</p>`},
+  {type:'q', q:"Wat is de ringafstand bij een bereik van 1600 meter?", o:["400 meter","200 meter","320 meter","500 meter"], a:0, w:"Bij 1600 m (en 2000 m) staan de ringen 400 m uit elkaar."},
+  {type:'q', q:"Vanaf welk punt wordt het bereik gemeten?", o:["Vanaf het middelpunt van het scherm, de positie van de scanner","Vanaf de boeg van het schip","Vanaf de onderrand van het scherm","Vanaf de eerste vaste ring"], a:0, w:"Het bereik loopt van het middelpunt (de scanner) tot de rand van het scherm."},
+
+  {type:'info', h:"VRM en EBL", html:`
+    <p>De <strong>VRM</strong> (Variable Range Marker) is een traploos verstelbare <strong>meetring</strong>. Het midden is de positie van de scanner. Je ziet hem als een <strong>stippelring</strong>. Zet je de VRM op een echo, dan zie je de afstand in meters. Die afstand <strong>moet digitaal uitleesbaar</strong> zijn. De VRM controleer je met de middelste vaste ring, want die is het meest betrouwbaar.</p>
+    <p>De <strong>EBL</strong> (Electronic Bearing Line) is een peilingslijn. Hij meet de <strong>hoek tussen de kiellijn en een echo</strong>. Ook die hoek <strong>moet digitaal uitleesbaar</strong> zijn.</p>
+    <div class="key"><strong>Aanvaringsgevaar herkennen:</strong> zet bij kruisende koersen de EBL op een naderende echo, en de VRM voor de afstand. Blijft de echo op de lijn naderen (de peiling verandert niet) of komt hij er nauwelijks van af, dan dreigt <strong>gevaar voor aanvaring</strong>.</div>
+    <p>Bediening op de simulator: EBL1/EBL2 indrukken, met de multiknop draaien, ENTER om vast te zetten. Uitzetten: twee keer op EBL1, de tweede keer vasthouden tot de pieptoon.</p>`},
+  {type:'q', q:"Een naderend schip blijft precies op je EBL staan. Wat betekent dat?", o:["Er dreigt gevaar voor aanvaring","Het schip vaart van je weg","Het schip ligt stil","De EBL is verkeerd afgesteld"], a:0, w:"Peiling verandert niet terwijl de afstand afneemt: gevaar voor aanvaring."},
+  {type:'q', q:"Hoe zie je de VRM op het scherm?", o:["Als een stippelring","Als een doorgetrokken ring","Als een lijn vanuit het midden","Als een knipperende stip"], a:0, w:"De VRM is een stippelring, in tegenstelling tot de vaste afstandsringen."},
+
+  {type:'info', h:"HL OFF en P-LINE", html:`
+    <p><strong>HL OFF</strong> (kiellijnonderdrukker) gebruik je als je <strong>kleine echo's onder de kiellijn</strong> vermoedt. De kiellijn mag <strong>niet</strong> constant weg zijn. Het is een schakelaar die vanzelf terugveert: zodra je loslaat, is de kiellijn terug.</p>
+    <p>Controleer de afstelling van de kiellijn bij goed zicht: stuur een object op grote afstand aan, het moet dan in de kiellijn liggen. Staat de antenne niet in de lijn van kiel en stevens, dan zit er aan één kant meer schip naast de kiellijn. Let daarop bij tegenliggers, betonning, bruggen en sluizen.</p>
+    <p><strong>P-LINE</strong> (navigatielijnen) zijn lijnen <strong>evenwijdig aan de kiellijn</strong>, aan bakboord en/of stuurboord. Je zet ze op de breedte van je schip of samenstel, of op een vaste afstand tot de oever. Zo zie je snel of je goed ligt voor een <strong>brugopening</strong> of een <strong>sluis</strong>.</p>`},
+  {type:'q', q:"Mag de kiellijn permanent van het scherm worden gehaald?", o:["Nee, HL OFF werkt alleen zolang je de knop ingedrukt houdt","Ja, via het menu","Ja, maar alleen bij goed zicht","Ja, als de P-LINE aan staat"], a:0, w:"Nee. HL OFF is een terugverende schakelaar: de kiellijn komt terug zodra je loslaat."},
+
+  {type:'info', h:"Decentreren, trails, Own Mark en paneel", html:`
+    <p><strong>Off center (decentreren):</strong> op rivierradars moet je het centrum (de scanner) <strong>recht naar achteren</strong> kunnen verplaatsen. Dan heb je meer zicht recht vooruit. Op een rivier of kanaal vaar je gedecentreerd. Bij bijvoorbeeld <strong>kop voornemen</strong>, waar je zowel voor als achter overzicht nodig hebt, vaar je gecentreerd.</p>
+    <div class="key">Decentreren is een <strong>wettelijke eis</strong>: elke binnenvaartradar moet het kunnen.</div>
+    <p><strong>Echo trail:</strong> een nalichtspoor (gloeispoor) achter de echo's van de vorige omwentelingen. Omdat de binnenvaartradar een <strong>relatieve</strong> beeldpresentatie heeft, krijgen álle echo's een spoor, ook de wal. Dat geeft een smeereffect. Op <strong>ruim vaarwater</strong> met weinig andere echo's is het wel bruikbaar. De lengte stel je in als tijd, bijvoorbeeld 15 seconden.</p>
+    <p><strong>Own Mark:</strong> toont de vorm van je schip of samenstel op basis van lengte en breedte. Handig bij manoeuvreren en het passeren van schepen en kunstwerken.</p>
+    <p><strong>Panel:</strong> de verlichting van het bedieningspaneel: laag, middel, hoog en uit.</p>`},
+  {type:'q', q:"Waarom vaar je op een rivier gedecentreerd?", o:["Je hebt dan meer zicht recht vooruit","Je ziet dan beter wat er achter je gebeurt","De dode zone wordt dan kleiner","De echo's worden dan scherper"], a:0, w:"Door het centrum naar achteren te schuiven krijg je meer zicht recht vooruit."},
+  {type:'q', q:"Waarom is echo trail op een drukke rivier weinig bruikbaar?", o:["Door het relatieve beeld krijgen alle echo's een spoor en ontstaat een smeereffect","Het spoor is alleen bij stilliggende schepen zichtbaar","Het vraagt te veel van de magnetron","Het werkt alleen in North-up"], a:0, w:"Binnenvaartradars tonen een relatief beeld, dus ook de wal en vaste objecten krijgen een spoor. Dat smeert het beeld uit."}
+  ],
+  test:[
+    {q:"Wat controleer je vóór het inschakelen van de radar?", o:["Of de antenne vrij kan draaien en gain, FTC en STC uit staan","Of het bereik op 32 km staat en de kiellijn uit is","Of de VRM en EBL ingesteld zijn","Of de trails op 15 seconden staan"], a:0, w:"Antenne vrij, gain, FTC en STC uit."},
+    {q:"Binnen hoeveel tijd moet de radar gebruiksklaar zijn?", o:["4 minuten","2 minuten","6 minuten","8 minuten"], a:0, w:"Uiterlijk 4 minuten."},
+    {q:"Wat is de functie van de standby-stand?", o:["De radar is opgewarmd en het scherm aan, maar er wordt niet uitgezonden","De radar zendt met verminderd vermogen","Het scherm is uit maar de radar zendt door","De radar stemt zichzelf af"], a:0, w:"Standby: scherm aan, magnetron niet actief."},
+    {q:"Wat verschijnt linksboven op het scherm als TX actief is?", o:["TRANSMIT","STANDBY","TUNE A","ALARM"], a:0, w:"Na TX staat er TRANSMIT."},
+    {q:"Tot welk bereik moet de radar op de korte puls werken?", o:["2000 meter","1200 meter","4000 meter","800 meter"], a:0, w:"Tot 2000 m moet de korte puls gebruikt worden."},
+    {q:"Welke drie zaken veranderen als je van korte naar lange puls gaat?", o:["Grootte van de echo's, grootte van de dode zone en het afstand onderscheidend vermogen","Frequentie, golflengte en draaisnelheid","Bereik, ringafstand en helderheid","Kiellijn, EBL en VRM"], a:0, w:"Echogrootte, dode zone en afstand onderscheidend vermogen."},
+    {q:"Wat is de functie van de Tune?", o:["De ontvanger goed afstemmen op de frequentie voor maximale echosterkte","De helderheid van het scherm regelen","Golfslag onderdrukken","Het bereik kiezen"], a:0, w:"Tune stemt de ontvanger af, zodat de echo's zo sterk mogelijk zijn."},
+    {q:"Op welk bereik adviseren fabrikanten af te stemmen?", o:["Het grootste bereik (32 km)","Het kleinste bereik (300 m)","Een bereik van 1200 m","Het bereik maakt niet uit"], a:0, w:"Op het grootste bereik: smalle band en lange puls, dus maximale uitslag van de afstemindicatie."},
+    {q:"Wat wordt ingesteld met Brilliance?", o:["Hoe fel het radarbeeld oplicht","De versterking van het echosignaal","De afstemming van de ontvanger","De verlichting van het bedieningspaneel"], a:0, w:"Brilliance = helderheid van het radarbeeld."},
+    {q:"Wat is het gevolg van te weinig helderheid (brilliance)?", o:["Kleine echo's verdwijnen","Het beeld wordt te vet","De dode zone wordt groter","Er verschijnt veel ruis"], a:0, w:"Te weinig helderheid laat kleine echo's verdwijnen."},
+    {q:"Wat is het gevolg van te veel helderheid (brilliance)?", o:["Het beeld gaat gloeien en uitsmeren","Kleine echo's verdwijnen","De magnetron slijt sneller","De ringen verdwijnen"], a:0, w:"Te veel helderheid laat het beeld gloeien en uitsmeren."},
+    {q:"Wat regel je met Gain?", o:["De versterking van het echosignaal","De pulslengte","De draaisnelheid van de scanner","De afstand tussen de ringen"], a:0, w:"Gain = versterking."},
+    {q:"Wat is het nadeel van een te hoge gain?", o:["Stoorecho's en ineenvloeiende echo's: een te vet beeld","Zwakke echo's verdwijnen","De kiellijn verdwijnt","Het bereik wordt kleiner"], a:0, w:"Te vet beeld, slechtere onderscheiding."},
+    {q:"Welke knop is de neerslagonderdrukker (FTC)?", o:["RAIN","SEA","BRILL","TUNE"], a:0, w:"RAIN = FTC."},
+    {q:"Hoe ver draai je de FTC open bij het opstarten?", o:["Tot de ruis net verdwijnt","Helemaal open","Helemaal dicht","Tot de echo's verdwijnen"], a:0, w:"Zover open dat de ruis net verdwijnt."},
+    {q:"In welke situatie gebruik je de neerslagonderdrukker (FTC)?", o:["Bij regen, sneeuw of hagel, en om het stoorveld achter een brug te verminderen","Alleen bij golfslag dichtbij het schip","Alleen bij goed zicht","Om de kiellijn beter te zien"], a:0, w:"FTC: neerslag, en ook het stoorveld achter een brug."},
+    {q:"Heeft de FTC effect op alle echo's?", o:["Ja, de FTC werkt altijd over het gehele beeld","Nee, alleen dichtbij het schip","Nee, alleen aan de rand van het scherm","Nee, alleen op bewegende echo's"], a:0, w:"De FTC werkt over het gehele beeld; helemaal open laat alle echo's verdwijnen."},
+    {q:"In welke situatie gebruik je de golfslagonderdrukker (STC)?", o:["Bij stoorecho's van golven dichtbij het schip","Bij regen op grote afstand","Om stoorecho's aan de rand van het scherm weg te halen","Bij radarinterferentie"], a:0, w:"STC tegen golfslag; werkt vanuit het midden, effectief tot 1200 m."},
+    {q:"Heeft de STC effect op alle echo's?", o:["Nee, de werking is maximaal in het midden en neemt af naar de rand","Ja, over het hele beeld gelijk","Ja, maar alleen bij lange puls","Nee, alleen op echo's van schepen"], a:0, w:"STC werkt vooral dichtbij (tot ca. 1200 m), niet aan de rand."},
+    {q:"Welke functie gebruik je om het stoorveld achter een brug te verminderen?", o:["De regenonderdrukker (FTC)","De golfslagonderdrukker (STC)","De Tune","De Brilliance"], a:0, w:"FTC (rain clutter) verkleint het stoorveld achter de brug. Gain terugdraaien kan ook, maar verzwakt alle echo's."},
+    {q:"Waar staat STC voor?", o:["Sensitivity Time Control","Sea Target Clutter","Signal Tune Control","Standard Time Constant"], a:0, w:"Sensitivity Time Control (tijdsafhankelijke versterkingsregelaar)."},
+    {q:"Wat is de functie van de afstandsringen?", o:["Afstanden schatten en gelijkmatig door een bocht varen via het snijpunt met de kiellijn","De peiling van een echo meten","Golfslag wegfilteren","De vorm van het eigen schip tonen"], a:0, w:"Afstand schatten; het snijpunt van kiellijn en ringen helpt om gelijkmatig door de bocht te varen."},
+    {q:"Hoe pas je de ringhelderheid aan?", o:["Via het menu (helderheid, vaste ringen); hij moet tot nul terug kunnen","Met de RR-knop","Met de Gain-knop","Met de Tune-knop"], a:0, w:"Via het menu. RR zet de ringen alleen aan of uit."},
+    {q:"Wat is de ringafstand bij een bereik van 1600 m?", o:["400 m","200 m","100 m","1 km"], a:0, w:"400 m."},
+    {q:"Wat is de ringafstand bij een bereik van 1200 m?", o:["200 m","400 m","300 m","100 m"], a:0, w:"200 m."},
+    {q:"Wat is de functie van de VRM?", o:["De afstand tot een echo meten met een verstelbare ring","De hoek tot een echo meten","Lijnen evenwijdig aan de kiellijn tonen","Het centrum naar achteren verplaatsen"], a:0, w:"VRM = variabele afstandsring, meet afstand."},
+    {q:"Wat is de functie van de EBL?", o:["De hoek tussen de kiellijn en een echo meten","De afstand tot een echo meten","De kiellijn tijdelijk weghalen","De helderheid van de echo's regelen"], a:0, w:"EBL = elektronische peilingslijn, meet de hoek."},
+    {q:"Wanneer gebruik je EBL en VRM samen?", o:["Bij kruisende koersen, om te zien of er aanvaringsgevaar dreigt","Bij het afstemmen van de radar","Bij het instellen van de pulslengte","Bij het kop voornemen"], a:0, w:"Peiling (EBL) en afstand (VRM) van een naderend schip volgen: blijft de peiling gelijk, dan dreigt aanvaringsgevaar."},
+    {q:"Wanneer gebruik je de HL OFF-knop?", o:["Als je kleine echo's onder de kiellijn vermoedt","Bij het passeren van een brug","Als de kiellijn verkeerd staat afgesteld","Bij slecht zicht altijd"], a:0, w:"Om kleine echo's onder de kiellijn te kunnen zien."},
+    {q:"Kan de kiellijn permanent worden uitgeschakeld?", o:["Nee, hij komt terug zodra je de knop loslaat","Ja, met twee keer drukken","Ja, via het menu","Alleen op de simulator"], a:0, w:"Nee, HL OFF is een terugverende schakelaar."},
+    {q:"Waarvoor gebruik je de P-LINE?", o:["Om te zien of je goed ligt voor een brugopening of sluis","Om de afstand tot een echo te meten","Om golfslag te onderdrukken","Om het beeld te decentreren"], a:0, w:"Navigatielijnen op de breedte van je schip of op afstand tot de oever."},
+    {q:"Vanuit welke positie wordt het bereik gemeten?", o:["Het middelpunt van het scherm (de scanner)","De boeg","De onderrand van het scherm","De laatste ring"], a:0, w:"Van het middelpunt tot de rand."},
+    {q:"Wat is de functie van decentreren?", o:["Het centrum naar achteren schuiven voor meer zicht vooruit","Het beeld naar het noorden draaien","Het bereik vergroten","De kiellijn verplaatsen naar bakboord"], a:0, w:"Meer zicht recht vooruit."},
+    {q:"Is de decentreerfunctie op alle binnenvaartradars aanwezig?", o:["Ja, het is een wettelijke eis voor elke binnenvaartradar","Nee, alleen op radars met een groot scherm","Alleen op radars met een TFT-scherm","Alleen op radars met Inland ECDIS"], a:0, w:"Ja. Decentreren is wettelijk verplicht op alle binnenvaartradars."},
+    {q:"Wanneer vaar je gecentreerd?", o:["Bij kop voornemen, als je voor en achter overzicht nodig hebt","Altijd op een rivier","Altijd op een kanaal","Bij goed zicht"], a:0, w:"Bij bijvoorbeeld kop voornemen."},
+    {q:"Wat is de functie van de Trails-toets?", o:["Een nalichtspoor tonen van de vorige omwentelingen","De vorm van het eigen schip tonen","De voorspelde koers tonen","Het alarm accepteren"], a:0, w:"Trails = nalichtspoor/gloeispoor."},
+    {q:"In welke situatie zijn trails goed bruikbaar?", o:["Op ruim vaarwater met weinig referentie-echo's","Op een smalle, drukke rivier","In een sluis","Bij het passeren van een brug"], a:0, w:"Op ruim vaarwater. Op drukke, smalle vaarwegen geeft het een smeereffect."},
+    {q:"Wat toont de functie Own Mark?", o:["De vorm van het eigen schip of samenstel","De voorspelde koers","De positie van andere schepen via AIS","Het nalichtspoor van echo's"], a:0, w:"Own Mark = vorm van eigen schip op basis van lengte en breedte."}
+  ]},
+{ id:3, title:"Echo's", sub:"Echoweergave, storende en valse echo's",
+  steps:[
+  {type:'info', h:"Hoe een echo ontstaat", html:`
+    <p>Een radarecho ontstaat als een puls een voorwerp treft en daarop terugkaatst. De radar zet die echo op het scherm, op basis van de <strong>afstand</strong> (tijd) en de <strong>richting</strong> ten opzichte van de kiellijn.</p>
+    <div class="key">De radar geeft de <strong>plaats</strong> van een voorwerp vrij nauwkeurig weer, de <strong>vorm</strong> minder nauwkeurig en de <strong>kleur</strong> helemaal niet.</div>
+    <p>Voor een echo op het scherm moet aan vier voorwaarden voldaan zijn:</p>
+    <ul>
+      <li><strong>Het voorwerp moet geraakt worden.</strong> Het moet binnen de bundel liggen. Hoe meer treffers, hoe sterker de echo.</li>
+      <li><strong>Het oppervlak moet loodrecht op de bundel staan.</strong> De puls gedraagt zich als een lichtgolf. Een glad, schuin vlak kaatst de straling weg. Hoe ronder het voorwerp, hoe minder energie loodrecht terugkomt.</li>
+      <li><strong>Het voorwerp moet hoog genoeg zijn.</strong> Hoe hoger, hoe groter het raakvlak.</li>
+      <li><strong>Het voorwerp mag de straling niet doorlaten.</strong> Kunststof (kunsthars) schepen zijn slecht of niet zichtbaar, tenzij er metaal in verwerkt is.</li>
+    </ul>
+    <p>Daarom moeten kleine schepen op bepaalde vaarwegen (BPR art. 9.04, bijlage 15) bij slecht zicht een <strong>radarreflector</strong> voeren.</p>`},
+  {type:'q', q:"Wat geeft de radar het minst nauwkeurig weer?", o:["De kleur van een voorwerp","De plaats van een voorwerp","De afstand tot een voorwerp","De richting van een voorwerp"], a:0, w:"De plaats vrij nauwkeurig, de vorm minder, en de kleur helemaal niet."},
+  {type:'q', q:"Waarom is een kunststof jacht slecht zichtbaar op de radar?", o:["Kunststof laat de radarstraling grotendeels door","Kunststof is altijd te laag","Kunststof kaatst alles terug naar de zon","Kunststof absorbeert alleen de lange puls"], a:0, w:"Het voorwerp mag de stralen niet doorlaten. Kunsthars laat ze door, tenzij er metaal in verwerkt is."},
+
+  {type:'info', h:"Passieve en actieve versterking", html:`
+    <p><strong>Passieve versterking:</strong> een <strong>radarreflector</strong> bestaat uit drie vlakken die loodrecht op elkaar staan. Met ribben van 22,1 cm haal je een reflectiewaarde gelijk aan <strong>10 m²</strong>. Je vindt ze bijvoorbeeld bij <strong>brugpijlers</strong>, op de <strong>kop van een krib</strong> en op <strong>tonnen</strong>.</p>
+    <p><strong>Actieve versterking:</strong> een reflector met een <strong>zender</strong>. Wordt hij door een radarpuls geraakt, dan zendt hij zelf een signaal uit dat als <strong>morseteken</strong> op het scherm verschijnt. Op de kaart staat zo'n voorwerp aangegeven als <strong>RACON</strong>.</p>
+    <div class="key">Voorbeeld: midvaarwaterboei KEETEN B heeft een Racon met morsesein <strong>K</strong> (lang, kort, lang).</div>`},
+  {type:'q', q:"Wat is een RACON?", o:["Een actieve versterker die een morseteken op het scherm zet","Een radarreflector van drie loodrechte vlakken","Een filter tegen radarinterferentie","Een radarbaken zonder eigen zender"], a:0, w:"RACON is actieve versterking: hij zendt zelf een signaal uit na een radarpuls, zichtbaar als morseteken."},
+
+  {type:'info', h:"Weergave op het scherm", html:`
+    <p>Het radarbeeld heeft een schaal. Die reken je uit met <strong>bereik ÷ straal van het scherm</strong>.</p>
+    <div class="tbl"><table><tr><th>Bereik</th><th>Straal</th><th>1 mm is</th></tr>
+      <tr><td>800 m</td><td>135 mm</td><td>5,9 m</td></tr><tr><td>1200 m</td><td>135 mm</td><td>8,9 m</td></tr><tr><td>4000 m</td><td>135 mm</td><td>29,6 m</td></tr></table></div>
+    <p><strong>Bundelbreedte:</strong> de richting van de bundel is het midden ervan. Zwaait de bundel over een voorwerp, dan reflecteert eerst het deel vóór de koerslijn, dan het deel óp en daarna het deel na de koerslijn. Daardoor wordt een echo breder getekend dan het voorwerp is.</p>
+    <p>De radar meet de tijd tussen begin van de uitzending en einde van de ontvangst, en deelt de afstand door twee. De afstand wordt getoond tot de <strong>voorkant</strong> van het voorwerp.</p>
+    <p>De weergave van een echo hangt af van:</p>
+    <ul><li>de schaalverhouding</li><li>het aantal pixels van het scherm</li><li>de bundelbreedte</li><li>de pulslengte</li></ul>
+    <p>Zelf verbeter je de ontvangst door: <strong>nauwkeurig afstemmen</strong> (tune), de <strong>gain op te draaien</strong>, en een <strong>grotere pulslengte</strong> te kiezen als afstandsonderscheiding even niet belangrijk is.</p>`},
+  {type:'q', q:"Het bereik is 1200 m, de schermstraal 135 mm. Hoeveel meter is 1 mm op het scherm?", o:["Ongeveer 8,9 meter","Ongeveer 5,9 meter","Ongeveer 12 meter","Ongeveer 29,6 meter"], a:0, w:"1200 ÷ 135 ≈ 8,9 m per millimeter."},
+  {type:'q', q:"Waarmee kun je zelf de kwaliteit van de echo verbeteren?", o:["Nauwkeurig afstemmen en de gain opdraaien","De STC volledig opendraaien","Een kleiner scherm kiezen","De kiellijn uitschakelen"], a:0, w:"Tune nauwkeurig, gain op, en eventueel een langere puls als afstandsonderscheiding even niet nodig is."},
+
+  {type:'info', h:"Steigers, bruggen en hoogspanningsleidingen", html:`
+    <p><strong>Steigers</strong> herken je aan hun uitstekende vorm in de oeverlijn. Een pontonsteiger kan bij het naderen met een leeg schip verdwijnen door de schaduw van het eigen schip. Een schip dat van een steiger loskomt, zie je pas als het <strong>meer dan één bundelbreedte</strong> van de steiger af is. Met een <strong>9 voet scanner</strong> (smallere bundel) zie je dat eerder dan met een 6 voet scanner.</p>
+    <p><strong>Bruggen</strong> geven een streep dwars over het vaarwater. Schepen in de brug zijn moeilijk of niet te zien, en pijlers vaak ook niet. Meet en noteer liever de afstand van de pijlers tot een vast punt op de oever. Achter een brug ontstaat vaak een <strong>stoorveld</strong> doordat energie meerdere keren in de constructie weerkaatst. Dat verminder je met de <strong>rain clutter (FTC)</strong>; gain terugdraaien kan ook, maar verzwakt alle echo's. Liggen bruggen dicht op elkaar, dan kan de gepasseerde brug nog eens achter de volgende verschijnen.</p>
+    <p><strong>Hoogspanningsleidingen</strong> geven alleen een echo waar de straling de draad <strong>loodrecht</strong> treft. Vaar je er recht op af, dan staat de echo op de kiellijn. Anders staat hij ergens aan BB of SB, en volgt hij een ramkoers.</p>
+    <div class="key"><strong>Draadecho herkennen:</strong> hij ligt altijd op de lijn van de masten; met minder gain verdwijnt hij en blijven de masten; stuur je naar de echo toe, dan blijft hij op ramkoers; stuur je weg, dan blijft hij je achtervolgen. Twijfel tussen draad en ankerligger? Wijzig koers: de draadecho beweegt mee, de ankerligger niet.</div>`},
+  {type:'q', q:"Hoe onderscheid je een draadecho van een ten anker liggend schip?", o:["Koers wijzigen: de draadecho beweegt mee, de ankerligger blijft liggen","Gain opdraaien: de draadecho wordt dan groter","Bereik vergroten: de ankerligger verdwijnt","Je kunt het verschil niet zien"], a:0, w:"Bij een koerswijziging beweegt de draadecho mee; de ankerligger blijft op dezelfde positie."},
+  {type:'q', q:"Waarom zie je een schip dat van een steiger loskomt pas laat?", o:["Het moet meer dan één bundelbreedte van de steiger af zijn","Steigers kaatsen alle straling weg","De dode zone is daar altijd te groot","Schepen aan een steiger hebben geen echo"], a:0, w:"Binnen één horizontale bundelbreedte vloeien steiger en schip samen. Een 9 voet scanner ziet het eerder."},
+
+  {type:'info', h:"Echo's van schepen", html:`
+    <p>Een geladen binnenvaartschip geeft meestal <strong>één, twee of drie losse echo's</strong>: van voren geraakt het voorschip en de opbouw achter. Soms kaatst energie van de stuurhut tegen de achterkant van de containers en komt via de stuurhut terug: dan zie je drie echo's. Van achteren geeft een schip meestal één echo, van opzij een streepje met verdikkingen voor en achter.</p>
+    <p><strong>Lege zeeschepen</strong> zijn soms niet te zien: boeg en romp kaatsen de straling weg en de bovenbouw steekt boven de bundel uit.</p>
+    <p>Kijk bij een groep echo's of ze bij elkaar horen. Vaar nooit tussen een <strong>sleepboot en het gesleepte schip</strong> door.</p>
+    <p><strong>Ankerliggers:</strong> een geladen ankerligger herken je aan zijn ligging. Lege schepen kun je niet goed inschatten; ze kunnen ook gestopt liggen. Passeer een rij ankerliggers <strong>zo ruim mogelijk</strong> en houd de lijn in de gaten: elke uitstulping valt dan op. Een grotere passeerafstand helpt ook de radar van je tegenligger om jou te onderscheiden.</p>`},
+  {type:'q', q:"Waarom passeer je een rij ankerliggers zo ruim mogelijk?", o:["Er kan een schip uit de rij vertrekken, en de tegenligger ziet je dan beter","Ankerliggers hebben geen echo","De dode zone wordt anders te groot","Het reglement verbiedt passeren binnen 100 m"], a:0, w:"Er kunnen schepen de rij verlaten, en de grotere afstand helpt het horizontaal onderscheidend vermogen van de radar van je tegenligger."},
+
+  {type:'info', h:"Slecht weer en radarinterferentie", html:`
+    <p><strong>Neerslagecho's</strong> komen van regen, natte sneeuw, motsneeuw, hagel en motregen. Regenbuien geven zwaardere echo's dan gewone regen. <strong>Sneeuw</strong> geeft de meeste echo's, door de structuur van de kristallen. Het beeld wordt bedekt met fijne puntjes. Gebruik de rain clutter (FTC).</p>
+    <div class="key"><strong>Vuistregel neerslag:</strong> kun je met ingeschakelde rain clutter de veiligheidsruimte niet goed overzien, dan is het moment om te <strong>stoppen</strong> (veilige ligplaats).</div>
+    <p><strong>Golfslagecho's</strong> ontstaan doordat gerimpeld water de straling meer verstrooit. Onderdrukken vraagt een gevoelige hand: <strong>enkele golfecho's moeten zichtbaar blijven</strong>. Draai je de sea clutter te hoog, dan verdwijnen ook ware echo's.</p>
+    <p><strong>Radarinterferentie:</strong> je ontvangt rechtstreeks de pulsen van een andere radar. Dat zijn geen echo's. Je ziet <strong>radiale streepjes</strong>, als spaken van een handwiel, die vanuit het centrum naar buiten bewegen en meedraaien. Dit kan op zeer grote afstand. Bestrijden met een <strong>kleiner bereik</strong> of de <strong>IR-knop</strong> (interference reject: low, medium, high). IR mag gewenste echo's niet onderdrukken.</p>`},
+  {type:'q', q:"Hoe ziet radarinterferentie eruit op het scherm?", o:["Radiale streepjes vanuit het centrum, als spaken van een wiel","Fijne puntjes verspreid over het hele scherm","Een boog rond het beeldcentrum","Een stoorveld achter een brug"], a:0, w:"Spaakvormige radiale streepjes. Fijne puntjes zijn neerslag; een boog rond het centrum komt van zijlussen."},
+  {type:'q', q:"Wat is de vuistregel bij het onderdrukken van golfslag?", o:["Enkele golfecho's moeten zichtbaar blijven","Alle golfecho's moeten weg zijn","De STC altijd helemaal open","Golfslag nooit onderdrukken"], a:0, w:"Draai je te ver, dan verdwijnen ook de ware echo's. Laat dus enkele golfecho's staan."},
+
+  {type:'info', h:"Valse echo's", html:`
+    <p>We noemen een echo die we niet kunnen thuisbrengen vaak 'vals'. Toch heeft <strong>iedere echo een oorzaak</strong>.</p>
+    <p><strong>Directe storende echo:</strong> naast de hoofdbundel zitten <strong>zijlussen</strong>, met veel minder energie. Hun echo's zijn bij een juiste gain nauwelijks te zien. Ze vormen een <strong>boog</strong> rond het beeldcentrum of een verdikking op de ringen, vooral in een goed reflecterende omgeving. <strong>Gain verminderen</strong> is voldoende.</p>
+    <p><strong>Indirecte storende echo:</strong> de hoofdbundel kaatst eerst via een ander object (bijvoorbeeld een brug) en dan pas terug. De echo verschijnt in de <strong>richting van de scanner</strong> op dat moment, maar op een <strong>grotere afstand</strong>, omdat de weg langer was. Zulke echo's verschijnen plotseling, zijn vrij groot en sterk.</p>
+    <div class="key">Voorbeeld Europoort: een echo op de kiellijn die meebewoog met het schip. Oorzaak: de zaling van de eigen bunkermast kaatste straling naar een dukdalf en terug. Ook je <strong>eigen schip</strong> kan dus de oorzaak zijn.</div>
+    <p><strong>Meervoudige echo:</strong> als je kort langs een ander schip vaart, kaatst de straling heen en weer tussen beide schepen. Je ziet meerdere echo's naast elkaar; de <strong>eerste</strong> is de ware echo. Dit kan ook bij bruggen, hoge objecten en schepen voor of achter je.</p>
+    <div class="key">Een <strong>ware echo</strong> is een echo van een bestaand object op de <strong>juiste peiling en afstand</strong>.</div>`},
+  {type:'q', q:"Hoe ontstaat een directe valse echo?", o:["Door weerkaatsing van de zijlussen naast de hoofdbundel","Door de hoofdbundel die via een brug terugkaatst","Door pulsen van een andere radar","Door neerslag in de bundel"], a:0, w:"Directe valse echo's komen van de zijlussen. Gain terug is voldoende."},
+  {type:'q', q:"Bij een meervoudige echo zie je drie echo's naast elkaar. Welke is de ware?", o:["De eerste (dichtstbijzijnde)","De middelste","De laatste (verste)","De sterkste, waar die ook staat"], a:0, w:"De eerste echo is de ware echo; de andere zijn meervoudige weerkaatsingen."},
+
+  {type:'info', h:"Schaduwvorming", html:`
+    <p>Schaduw ontstaat niet alleen door het eigen schip, maar ook door <strong>hoge objecten</strong> in de omgeving, zoals een hoog zeeschip of gebouwen. Achter zo'n object komen geen pulsen meer, dus ook geen echo's.</p>
+    <div class="key">Houd er altijd rekening mee dat er in de schaduw van een hoog object een ander binnenvaartschip kan varen dat je tijdelijk niet op de radar ziet.</div>`},
+  {type:'q', q:"Je vaart langs een hoog zeeschip. Wat moet je bedenken?", o:["Achter het zeeschip kan een schip varen dat je niet ziet","Het zeeschip geeft altijd een valse echo","De radar ziet door het zeeschip heen","Het zeeschip vergroot je dode zone"], a:0, w:"Schaduwvorming: achter het hoge object is niets zichtbaar."}
+  ],
+  test:[
+    {q:"Welke voorwaarde hoort NIET bij het krijgen van een echo?", o:["Het voorwerp moet een felle kleur hebben","Het voorwerp moet geraakt worden","Het oppervlak moet loodrecht op de bundel staan","Het voorwerp moet hoog genoeg zijn"], a:0, w:"Kleur speelt geen rol. Voorwaarden: geraakt, loodrecht, hoog genoeg, stralen niet doorlaten."},
+    {q:"Wat is een passieve versterker?", o:["Een radarreflector die de weerkaatsing verbetert zonder eigen zender","Een reflector met zender die een morseteken geeft","De gain-knop van de radar","Een extra antenne op het voorschip"], a:0, w:"Passief = reflector van drie loodrechte vlakken, bijvoorbeeld bij brugpijlers, kribben en tonnen."},
+    {q:"Wat is een actieve versterker?", o:["Een reflector met zender die na een radarpuls een morseteken uitzendt","Een radarreflector van drie loodrechte vlakken","Een versterker in de ontvanger","Een extra magnetron"], a:0, w:"Actief = RACON, zichtbaar als morseteken op het scherm."},
+    {q:"Welk morseteken zendt de Racon van boei KEETEN B?", o:["K (lang, kort, lang)","A (kort, lang)","S (kort, kort, kort)","O (lang, lang, lang)"], a:0, w:"K: lang, kort, lang."},
+    {q:"Welke reflectiewaarde haalt een radarreflector met ribben van 22,1 cm?", o:["10 m²","1 m²","22 m²","100 m²"], a:0, w:"10 m²."},
+    {q:"Welke factor is NIET van invloed op de echoweergave?", o:["De kleur van het voorwerp","De schaalverhouding","De bundelbreedte","De pulslengte"], a:0, w:"Factoren: schaalverhouding, aantal pixels, bundelbreedte, pulslengte."},
+    {q:"Hoe kun je de kwaliteit van de echo beïnvloeden?", o:["Nauwkeurig afstemmen, gain opdraaien, eventueel langere puls","STC en FTC helemaal opendraaien","Het beeld decentreren","De ringen uitschakelen"], a:0, w:"Tune, gain, en eventueel een grotere pulslengte."},
+    {q:"Wat is een voordeel van een 9 voet scanner ten opzichte van een 6 voet scanner?", o:["Smallere bundel, dus beter horizontaal onderscheidend vermogen","Kleinere dode zone","Hogere frequentie","Minder zendvermogen nodig"], a:0, w:"Langere scanner = smallere bundel, je ziet bijvoorbeeld eerder een schip loskomen van een steiger."},
+    {q:"Hoe kan het dat een brugecho meer dan één keer op het beeld staat?", o:["Indirecte weerkaatsing: de gepasseerde brug of het eigen schip wordt nog eens achter de volgende brug geprojecteerd","De radar draait te langzaam","De STC staat te hoog","De bundel is te smal"], a:0, w:"Bij bruggen dicht op elkaar kan de gepasseerde brug achter de volgende verschijnen, of geeft het eigen schip een indirecte echo."},
+    {q:"Waaraan herken je de echo van een hoogspanningsleiding?", o:["Hij ligt op de lijn van de masten en volgt een ramkoers","Hij staat altijd stil op het scherm","Hij verschijnt als radiale streepjes","Hij is alleen zichtbaar bij lange puls"], a:0, w:"Op de lijn van de masten; verdwijnt bij minder gain; blijft op ramkoers, ook als je koers wijzigt."},
+    {q:"Waar ligt de draadecho bij een pont met bovengrondse kabel?", o:["Boven (stroomopwaarts) de pont, niet ertussen","Precies tussen de afritten","Altijd stroomafwaarts","Altijd op de kiellijn"], a:0, w:"De draadecho bevindt zich altijd stroomopwaarts van de pont, pontonbrug of afritten."},
+    {q:"Hoe herken je een stilliggend schip op de radar?", o:["Door van koers te veranderen: de positie van de ankerligger verandert niet","Door de gain op te draaien tot de echo verdwijnt","Door het bereik te verkleinen tot de echo knippert","Door de FTC open te draaien tot de echo kleiner wordt"], a:0, w:"Wijzig je koers: een ankerligger blijft op zijn plaats liggen, een draadecho beweegt mee."},
+    {q:"Waarom kan een leeg zeeschip onzichtbaar zijn op de radar?", o:["Boeg en romp kaatsen de straling weg en de bovenbouw steekt boven de bundel uit","Zeeschepen zijn van kunststof","Zeeschepen hebben een eigen stoorzender","De STC onderdrukt grote echo's"], a:0, w:"Romp kaatst weg, bovenbouw boven de bundel."},
+    {q:"Hoe ontstaat radarinterferentie?", o:["Doordat pulsen van een andere radar rechtstreeks worden ontvangen","Door weerkaatsing via een brug","Door zijlussen van de eigen antenne","Door regen in de bundel"], a:0, w:"Rechtstreekse ontvangst van andermans radarpulsen, geen echo."},
+    {q:"Wat doet de IR-toets?", o:["Filtert rechtstreekse ontvangsten van andere radars uit het beeld","Vergroot het bereik","Onderdrukt regenecho's","Zet de kiellijn tijdelijk uit"], a:0, w:"IR = Interference Reject, tegen radarinterferentie."},
+    {q:"Hoe bestrijd je radarinterferentie als er geen IR-knop is?", o:["Een kleiner bereik kiezen","De gain helemaal opendraaien","Het beeld decentreren","De FTC dichtdraaien"], a:0, w:"Een kleiner bereik, of de IR-knop indien aanwezig."},
+    {q:"Hoe ontstaat een directe valse echo?", o:["Door de zijlussen naast de hoofdbundel","Door de hoofdbundel via een ander object","Door een andere radar","Door golfslag"], a:0, w:"Zijlussen; gain verminderen is voldoende."},
+    {q:"Hoe ontstaat een indirecte valse echo?", o:["De hoofdbundel kaatst eerst via een ander object voordat de echo wordt ontvangen","Via de zijlussen","Door pulsen van een andere radar","Door neerslag"], a:0, w:"Via een ander object (bijvoorbeeld een brug); verschijnt in de scannerrichting op grotere afstand."},
+    {q:"Op welke afstand verschijnt een indirecte valse echo?", o:["Verder weg dan het echte object, want de weg was langer","Precies op de afstand van het reflectiepunt","Altijd op de eerste ring","Dichter bij dan het echte object"], a:0, w:"De gemeten tijd is langer, dus de echo staat verder weg."},
+    {q:"Wanneer bestaat de kans op een meervoudige echo?", o:["Als je kort langs een ander schip vaart of het ontmoet","Alleen bij zware regen","Alleen op groot bereik","Alleen bij North-up"], a:0, w:"Bij voorbijlopen of ontmoeten op korte afstand, ook bij schepen voor of achter je."},
+    {q:"Wat is het verschil tussen een ware en een valse echo?", o:["Een ware echo staat op de juiste peiling en afstand van een bestaand object","Een ware echo is altijd sterker","Een valse echo heeft geen oorzaak","Een valse echo staat altijd op de kiellijn"], a:0, w:"Ware echo = bestaand object op juiste peiling en afstand. Ook een valse echo heeft een oorzaak."},
+    {q:"Wat geeft de meeste neerslagecho's?", o:["Sneeuw","Motregen","Mist","Gewone regen"], a:0, w:"Sneeuw, door de structuur van de sneeuwkristallen."},
+    {q:"Wanneer is volgens de vuistregel het moment om te stoppen bij neerslag?", o:["Als je met rain clutter de veiligheidsruimte niet goed kunt overzien","Zodra het begint te regenen","Als de FTC op de helft staat","Pas als er geen enkele echo meer is"], a:0, w:"Kun je de veiligheidsruimte niet overzien, zoek dan een veilige ligplaats."},
+    {q:"Wat gebeurt er als je de sea clutter (STC) te hoog draait?", o:["Ook ware echo's worden onderdrukt","Er verschijnt meer golfslag","Het bereik wordt groter","De kiellijn verdwijnt"], a:0, w:"Laat enkele golfecho's zichtbaar."},
+    {q:"Wat veroorzaakt schaduwvorming?", o:["Een hoog object waarachter geen pulsen meer komen","Te veel gain","Radarinterferentie","Een te korte puls"], a:0, w:"Hoge objecten zoals zeeschepen of gebouwen; daarachter zie je niets."},
+    {q:"Mag je ligplaats nemen onder een brug of hoogspanningsleiding?", o:["Nee, dat verbieden de reglementen","Ja, als je radar aan staat","Ja, maar alleen overdag","Alleen met een radarreflector"], a:0, w:"De reglementen verbieden ligplaats onder een brug of hoogspanningsleiding."},
+    {q:"Hoe verminder je het stoorveld achter een brug zonder alle echo's te verzwakken?", o:["Met de rain clutter (FTC)","Met de gain","Met de brilliance","Met de STC"], a:0, w:"Gain verzwakt alle echo's; FTC verkleint alleen het stoorveld."}
+  ]},
+{ id:4, title:"Varen op radar", sub:"Bochten, relatieve beweging, VHF en AIS",
+  steps:[
+  {type:'info', h:"Basisbegrippen", html:`
+    <p>De kunst van het varen is <strong>zo weinig mogelijk sturen</strong>. Dan wordt de padbreedte smaller.</p>
+    <p><strong>Slingerperiode:</strong> elk schip slingert en moet worden bijgestuurd. De slingerperiode hangt onder andere af van de <strong>snelheid en lengte</strong> van het schip, en van de verhouding tussen het natte deel van het schip en het natte deel van de vaarweg. Een spits slingert ongeveer 4° tot 7° per minuut, een 80 meter schip ongeveer 3° en een lange zesbaks duweenheid ongeveer 0,5° per minuut.</p>
+    <p><strong>Aansturingspunt:</strong> een vast punt in de achtergrond, zoals een boom, schoorsteen of gebouw. Hoe verder weg, hoe beter je koers houdt. De kleinste goede afstand is ongeveer <strong>20 × de scheepslengte</strong>. Is hij minder dan 4 à 5 scheepslengtes weg, kies dan een nieuw punt.</p>
+    <p><strong>Invloedssfeer:</strong> het gebied dat een schip nodig heeft om veilig te varen en zo nodig op tijd te stoppen, afhankelijk van eigen manoeuvreermogelijkheden en omstandigheden zoals ander verkeer en het soort vaarwater. Klein voor een patrouilleboot, groot voor een zesbaks duwstel.</p>
+    <p><strong>Padbreedte:</strong> de breedte van de vaarbaan die het schip werkelijk inneemt. Op een recht stuk ongeveer <strong>1,5 × de scheepsbreedte</strong>. In een bocht, bij dwarswind of bij opsturen wordt hij snel groter.</p>`},
+  {type:'q', q:"Wat is de padbreedte van een schip op een recht stuk ongeveer?", o:["1,5 × de scheepsbreedte","Precies de scheepsbreedte","3 × de scheepsbreedte","De halve vaarwegbreedte"], a:0, w:"Ongeveer 1,5 × de scheepsbreedte; in bochten en bij dwarswind meer."},
+  {type:'q', q:"Wat wordt verstaan onder de invloedssfeer?", o:["Het gebied dat een schip nodig heeft om veilig te varen en op tijd te kunnen stoppen","De breedte van de vaarbaan van het schip","Het bereik van de radar","Het gebied achter een brug waar stoorecho's zijn"], a:0, w:"Afhankelijk van de eigen manoeuvreermogelijkheden en externe omstandigheden."},
+
+  {type:'info', h:"Op zicht en op radar", html:`
+    <p>Op zicht kijk je in het <strong>horizontale vlak</strong> tegen de omgeving aan. Op radar zie je de situatie <strong>van bovenaf</strong>, als een klein plaatje van de werkelijkheid. Een engte open varen doe je op radar precies zoals op zicht.</p>
+    <ul>
+      <li>Hoe groter het bereik, hoe kleiner alles wordt. Op een groot bereik zie je schepen die langzamer dan <strong>6 km/u</strong> varen niet meer als bewegend.</li>
+      <li>Het beeld <strong>loopt altijd iets achter</strong> door de draaisnelheid van de antenne en de verwerking. Kijk daarom voortdurend.</li>
+      <li>Je eigen snelheid schat je slecht op het radarbeeld. Ken het verband tussen toerental en snelheid, of lees het af op de ECDIS of GPS.</li>
+      <li>Varend op stroom zie je zijdelingse verplaatsing pas na enige tijd. Houd het schip recht in de stroom.</li>
+    </ul>`},
+  {type:'q', q:"Waarom moet je het radarbeeld voortdurend in de gaten houden?", o:["Het beeld loopt altijd iets achter op de werkelijkheid","Het beeld verdwijnt na een minuut","De kiellijn verschuift vanzelf","De ringen veranderen steeds van afstand"], a:0, w:"Door antennedraaiing en verwerking loopt het beeld achter; wie niet blijft kijken, loopt nog verder achter."},
+
+  {type:'info', h:"Bochten varen met de kiellijnafstand", html:`
+    <p>Bij slecht zicht moeten schepen volgens de reglementen zoveel mogelijk <strong>stuurboordwal</strong> houden (behalve op delen van de Rijn in Duitsland). Op een recht stuk houd je de kiellijn evenwijdig aan de oever of boeienlijn.</p>
+    <p>In bochten werk je met de <strong>kiellijnafstand</strong>:</p>
+    <div class="key">Kiellijnafstand = de afstand van de <strong>scanner</strong> tot het <strong>snijpunt van de kiellijn met de oever</strong>.</div>
+    <p>Rivieren zijn genormaliseerd: de breedte van de bedding is <strong>1/4 tot 1/6</strong> van de straal van de bocht. Het rechte stuk tussen twee bochten heet de <strong>overgang</strong> of het <strong>rak</strong>.</p>
+    <p>Voorbeeld: bereik 1200 m, ringen 200 m. Bij het invaren van de bocht snijdt de kiellijn de oever tussen 600 en 800 m. Houd je de kiellijnafstand tussen die waarden, dan vaar je op dezelfde breedtepositie door de bocht. Wil je verder afhouden, laat de afstand dan korter worden. Dreigt hij te veranderen, dan volgt een stuuractie of snelheidsaanpassing.</p>
+    <p>Omdat je stuurboordwal houdt, is de kiellijnafstand met de buitenbocht aan <strong>bakboord altijd langer</strong> dan met de buitenbocht aan stuurboord. Tip: zet de VRM op 500 m, dan zie je de 400 en 600 m ring in één oogopslag.</p>`},
+  {type:'q', q:"Wat is de kiellijnafstand?", o:["De afstand van de scanner tot het snijpunt van de kiellijn met de oever","De afstand tussen de kiellijn en de vaarwater-as","De afstand tussen de afstandsringen","De afstand tot de tegenligger"], a:0, w:"Scanner tot snijpunt kiellijn-oever."},
+  {type:'q', q:"Bij welke bocht is de kiellijnafstand langer?", o:["Met de buitenbocht aan bakboord","Met de buitenbocht aan stuurboord","Dat is altijd gelijk","Alleen opvarend bij een SB-bocht"], a:0, w:"Omdat je stuurboordwal houdt, ligt de bakboordoever verder weg: langere kiellijnafstand."},
+
+  {type:'info', h:"Tegenliggers in de bocht", html:`
+    <p>In de buitenbocht volg je niet alleen je eigen kiellijnafstand, maar ook die van de <strong>tegenligger</strong>. Kritisch wordt het als die maar 2 tot 4 lengten langer is dan de jouwe. Echt gevaarlijk bij <strong>gelijke</strong> kiellijnafstanden.</p>
+    <div class="key">Trek in gedachten de kiellijn van de tegenligger door. Zolang die <strong>vóór jouw scannerpunt</strong> langs loopt, is er <strong>gevaar voor aanvaring</strong>. Ligt hij achter je scannerpunt, dan is er geen gevaar.</div>
+    <p>Ontsnappen: zet bij voldoende afstand de <strong>bochtaanwijzer op 0°</strong> en loop verder de buitenbocht in. Zodra de kiellijn van de tegenligger over je scannerpunt gaat, stuur je terug. Wijs de tegenligger zo nodig via de VHF op de situatie.</p>
+    <p>Het moeilijkste punt is het passeren van de <strong>bovenzijde van de grond</strong>; vooral voor lange, langzame schepen en duwstellen. In de afvaart: te vroeg insturen geeft zuiging en uitgieren; te laat geeft een te grote drifthoek, met kans dat het achterschip raakt.</p>
+    <p>Tijd is afstand. Bij zeer lage snelheid kun je nog uitwijken op <strong>2 × de scheepslengte</strong>, bij hogere snelheid heb je ten minste <strong>6 × de scheepslengte</strong> nodig.</p>`},
+  {type:'q', q:"De doorgetrokken kiellijn van een tegenligger loopt vóór jouw scannerpunt langs. Wat betekent dat?", o:["Er is gevaar voor aanvaring","Er is geen gevaar","De tegenligger ligt stil","Je moet direct hard stuurboord geven"], a:0, w:"Zolang de kiellijn van de tegenligger vóór je scannerpunt ligt, dreigt een aanvaring."},
+
+  {type:'info', h:"Rivierpiloot en bochtaanwijzer", html:`
+    <p>Een <strong>rivierpiloot</strong> werkt samen met de bochtaanwijzer om de <strong>ingestelde draaisnelheid</strong> vast te houden. Het systeem bepaalt zelf de roeruitslag, afhankelijk van vaarsnelheid en roerdruk. Slingert het schip op ruim water in de deining, dan gebruik je de toets <strong>demping</strong>.</p>
+    <p>Is de natte doorsnede van het kanaal kleiner dan 4,5 × die van het schip, dan beïnvloedt zuiging het stuurgedrag.</p>
+    <p>De <strong>bochtaanwijzer (BAW)</strong>, in het Engels <em>rate of turn indicator</em> (ROT), meet de <strong>draaisnelheid in graden per minuut</strong>. 10° stuurboord betekent: het schip draait 10° per minuut naar stuurboord. Radarvaart is zonder BAW ondenkbaar, want kleine koerswijzigingen zie je op de radar pas laat.</p>
+    <div class="tbl"><table><tr><th>ES-TRIN eis</th><th>Waarde</th></tr><tr><td>Operationeel binnen</td><td>4 minuten</td></tr><tr><td>Schaallengte</td><td>min. 20 cm</td></tr><tr><td>Meetbereiken</td><td>30, 60, 90, 180, 300°/min</td></tr></table></div>
+    <p>30°/min voor een duwstel, 90°/min bijvoorbeeld een Europaschip, 300°/min een patrouillevaartuig.</p>`},
+  {type:'q', q:"De bochtaanwijzer staat op 10° stuurboord. Wat betekent dat?", o:["Het schip draait 10 graden per minuut naar stuurboord","Het roer staat 10 graden naar stuurboord","Het schip ligt 10 graden uit koers","Het schip drijft 10 meter per minuut af"], a:0, w:"De BAW toont de draaisnelheid in graden per minuut, niet de roerstand."},
+  {type:'q', q:"Wat kun je doen als het schip op ruim water in de golven slingert en de rivierpiloot meestuurt?", o:["De demping van de stuurmachine gebruiken","De BAW uitschakelen","Het bereik vergroten","Harder gaan varen"], a:0, w:"Met de toets 'demping' voorkom je dat er roer wordt gegeven terwijl dat niet nodig is."},
+
+  {type:'info', h:"Hoe de BAW werkt", html:`
+    <p>Het hart van de BAW is een <strong>verticaal draaiende tol</strong> in een raamwerk. Draait het schip, dan kantelt de tol; de hellingshoek wordt afgelezen als draaisnelheid. Een veer zet de tol terug als de draaiing stopt.</p>
+    <p>De tol staat zo dicht mogelijk bij de <strong>zwaartelijn</strong> van het schip. Rolt het schip zonder te draaien, dan kan de BAW toch een draaiing aangeven; daarom dempt men de tol, of hangt men hem in een tweede ring (duurder maar beter). Schokken en trillingen beschadigen de lagers.</p>
+    <p>De tol reageert op een koersverandering bij varen <strong>vooruit én achteruit</strong>.</p>
+    <div class="key"><strong>LET OP:</strong> wordt het schip door <strong>drift</strong> zijwaarts verzet zonder van koers te veranderen, dan geeft de BAW <strong>geen uitslag</strong>. Zijdelingse verplaatsing lees je af op de <strong>Dopplerlog</strong>.</div>`},
+  {type:'q', q:"Wanneer geeft de bochtaanwijzer niets aan terwijl het schip toch vaart?", o:["Als het schip door drift zijwaarts verzet wordt zonder koersverandering","Als het schip achteruit vaart en draait","Als het schip een bocht naar bakboord maakt","Als de rivierpiloot aan staat"], a:0, w:"Drift zonder draaiing geeft geen uitslag. Gebruik de Dopplerlog voor zijdelingse verplaatsing."},
+
+  {type:'info', h:"Relatieve beweging", html:`
+    <p>De binnenvaartradar toont een <strong>relatief beeld</strong>: alles is gerelateerd aan de beweging van je eigen schip. Denk aan de oever die voorbijtrekt: die beweegt tegengesteld aan je koers, met jouw snelheid. Bij een koerswijziging draait het beeld tegengesteld.</p>
+    <ul>
+      <li>Eigen schip stil, ander schip kruist: je ziet de ware koers en snelheid van het andere schip.</li>
+      <li>Eigen schip vaart, ander schip ligt stil: het andere schip beweegt <strong>tegengesteld aan jouw koers</strong> over het beeld.</li>
+      <li>Beide varen: je ziet een combinatie, de relatieve nadering.</li>
+    </ul>
+    <p>Of een schip vaart of stil ligt, bepaal je door na te gaan of de echo ten opzichte van de <strong>bodem</strong> beweegt. Een trail helpt om de relatieve baan te zien.</p>
+    <div class="key">Is de relatieve baan van een ander schip <strong>op jouw centrum gericht</strong>, dan dreigt <strong>onmiddellijk gevaar</strong> en moet je handelen. Gaat hij alleen door je veiligheidsruimte, dan kan een verkeerde actie het gevaar juist vergroten.</div>`},
+  {type:'q', q:"Je vaart en nadert een stilliggend schip. Hoe beweegt die echo over je scherm?", o:["Tegengesteld aan je eigen koers, met jouw snelheid","Hij blijft stilstaan op het scherm","Hij beweegt met je mee","Hij beweegt dwars over het scherm"], a:0, w:"In een relatief beeld beweegt een stilliggend object tegengesteld aan jouw koers en snelheid."},
+
+  {type:'info', h:"Gevaar voor aanvaring: de ruimtes", html:`
+    <p>Een aanvaring ontstaat niet plotseling; de eerste waarschuwing komt al op grote afstand. Bepaal van iedere tegenligger de positie, de ligging ten opzichte van de vaarwater-as en de kiellijnafstand. Werk systematisch.</p>
+    <div class="tbl"><table><tr><th>Afstand</th><th>Ruimte</th><th>Wat</th></tr>
+      <tr><td>1000–2000 m</td><td>Observatie</td><td>Info verzamelen; onduidelijk? Direct snelheid verlagen</td></tr>
+      <tr><td>400–1000 m</td><td>Reactie</td><td>Koers vast, herkenbaar, afgesproken</td></tr>
+      <tr><td>0–400 m</td><td>Veiligheid</td><td>Alleen noodmanoeuvres, geen koerswijziging</td></tr></table></div>
+    <p>In de veiligheidsruimte kun je alleen nog stoppen, de vaargeul vrijhouden en communiceren.</p>
+    <div class="key"><strong>Naderingssnelheid:</strong> een schip van 10 km/u en een van 20 km/u op 2000 m van elkaar ontmoeten elkaar al na <strong>4 minuten</strong>. Kijk altijd ver vooruit.</div>`},
+  {type:'q', q:"Welke ruimte is 400 tot 1000 meter?", o:["De reactieruimte","De observatieruimte","De veiligheidsruimte","De dode zone"], a:0, w:"1000–2000 m observatie, 400–1000 m reactie, 0–400 m veiligheid."},
+  {type:'q', q:"Wat is in de veiligheidsruimte (0–400 m) nog mogelijk?", o:["Alleen noodmanoeuvres: stoppen, vaargeul vrijhouden, communiceren","Een rustige koerswijziging","Een VHF-afspraak maken over de passage","Snelheid verhogen om voor te gaan"], a:0, w:"Geen koersverandering meer, alleen noodmanoeuvres."},
+
+  {type:'info', h:"Stappenschema bij aanvaringsgevaar", html:`
+    <ul>
+      <li><strong>2000–1600 m, eerste verkenning:</strong> varend of stil? Positie van de echo ten opzichte van de oever? Naderingssnelheid? VHF-meldingen? Reglementaire handelingen?</li>
+      <li><strong>Positie goed:</strong> doorgaan.</li>
+      <li><strong>Positie twijfelachtig:</strong> snelheid afnemen en een VHF-melding doen.</li>
+      <li><strong>1000–800 m, geen VHF-antwoord:</strong> snelheid terug tot manoeuvreersnelheid, VHF-melding en geluidsein.</li>
+      <li><strong>Wordt het niet beter:</strong> stoppen, mistseinen, koerssignaal.</li>
+    </ul>
+    <p>Er is geen standaardoplossing, maar een vaste procedure houdt het overzichtelijk en voorkomt tijdnood.</p>`},
+  {type:'q', q:"Op 900 m krijg je geen antwoord op je VHF-melding. Wat doe je?", o:["Snelheid terug tot manoeuvreersnelheid, VHF-melding en geluidsein","Gewoon doorvaren","Direct hard stuurboord","Het bereik vergroten tot 4 km"], a:0, w:"Volgens het schema: manoeuvreersnelheid, VHF en geluidsein. Wordt het niet beter: stoppen, mistseinen, koerssignaal."},
+
+  {type:'info', h:"Organisatie in het stuurhuis", html:`
+    <ul>
+      <li>Zorg voor een goede opstelling van instrumenten en hendels.</li>
+      <li>Zorg dat je schip altijd goed ligt, ook als er nog geen andere schepen te zien zijn.</li>
+      <li>Observeer het scherm <strong>voortdurend en systematisch</strong>. Door beeld- en scannervertraging heb je seconden tot minuten nodig om het geheel te overzien.</li>
+      <li>Met een uitkijk of roerganger: spreek de communicatie af, geef duidelijke commando's en laat ze herhalen.</li>
+      <li>Geen televisie of afleidende gesprekken.</li>
+      <li>Bij aflossen: laat het opkomende team <strong>10 minuten</strong> met het afgaande team meevaren.</li>
+    </ul>`},
+  {type:'q', q:"Hoe lang laat je bij een aflossing het opkomende team meevaren?", o:["10 minuten","1 minuut","30 minuten","Niet nodig"], a:0, w:"Zo gaat er geen informatie verloren."},
+
+  {type:'info', h:"Communicatie via VHF", html:`
+    <p><strong>9 van de 10 aanvaringen</strong> bij slecht zicht komen door slechte communicatie. Wees kort en zakelijk met de <strong>3 W's</strong>:</p>
+    <ul><li><strong>Wie</strong> ben ik: scheepsnaam</li><li><strong>Waar</strong> ben ik: positie</li><li><strong>Waarheen</strong> ga ik: richting of bestemming</li></ul>
+    <p>Geef je positie met geografische punten: plaatsnamen, bruggen, hoogspanningskabels, havens. Bijvoorbeeld: <em>"Prinses Christina, afvarend 200 meter boven het veer van Krimpen."</em> Vermijd oude termen die niet iedereen kent. Bij twijfel: vraag het.</p>
+    <p><strong>VTS (verkeerspost):</strong> bij slecht zicht meld je je bij het binnenvaren van een sector. Noem de sectornaam en wacht op antwoord, geef dan de 3 W's. <span class="mono">Over</span> = klaar, antwoord verwacht. <span class="mono">Begrepen, uit</span> = einde gesprek. <span class="mono">Standby</span> = wachten.</p>
+    <p>Gebruik de taal van het land. Bij problemen is <strong>Duits</strong> de voertaal. In zeehavens en op de Westerschelde mag ook Engels.</p>`},
+  {type:'q', q:"Waar staan de 3 W's voor?", o:["Wie, Waar, Waarheen","Wat, Wanneer, Waarom","Wind, Water, Weer","Wie, Wat, Wanneer"], a:0, w:"Scheepsnaam, positie en richting/bestemming."},
+  {type:'q', q:"Welke taal is voertaal als er communicatieproblemen zijn?", o:["Duits","Engels","Nederlands","Frans"], a:0, w:"Duits. In zeehavens en op de Westerschelde mag ook Engels."},
+
+  {type:'info', h:"Vakjargon", html:`
+    <div class="tbl"><table><tr><th>Term</th><th>Betekenis</th></tr>
+      <tr><td>Opvaart</td><td>Tegen de (eb)stroom in</td></tr>
+      <tr><td>Afvaart</td><td>Met de (eb)stroom mee</td></tr>
+      <tr><td>Kop voor nemen</td><td>Keren met de stroom mee</td></tr>
+      <tr><td>Opdraaien</td><td>Keren tegen de stroom in</td></tr>
+      <tr><td>Boven de brug</td><td>Bovenstrooms</td></tr>
+      <tr><td>In de brug</td><td>Recht onder de brug</td></tr>
+      <tr><td>Beneden de brug</td><td>Benedenstrooms</td></tr>
+      <tr><td>Overstuur</td><td>Achteruit varend</td></tr></table></div>`},
+  {type:'q', q:"Wat betekent 'opdraaien'?", o:["Keren tegen de stroom in","Keren met de stroom mee","Achteruit varen","Tegen de stroom in varen"], a:0, w:"Opdraaien = keren tegen de stroom in. Kop voor nemen = keren met de stroom mee."},
+
+  {type:'info', h:"AIS", html:`
+    <p><strong>AIS</strong> (Automatic Identification System) zendt automatisch de <strong>identiteit en positie</strong> van een schip uit via een marifoonkanaal. Het apparaat heet ook <strong>transponder</strong>.</p>
+    <ul>
+      <li>Verplicht in combinatie met een <strong>elektronische vaarkaart</strong> (Inland ECDIS of vergelijkbaar).</li>
+      <li>Moet altijd aan staan en correcte gegevens uitzenden.</li>
+      <li>Een defecte AIS moet binnen <strong>48 uur</strong> gerepareerd zijn; meld dit via het blokkanaal.</li>
+      <li>De kaartcomputer mag niet voor andere dingen gebruikt worden.</li>
+      <li>Geldt voor de meeste schepen: 20 m of langer, kleinere beroepsvaart met eigen aandrijving, politie, veerponten. Bij een duwstel op de duwboot; bij een sleep op sleepboot én gesleepte schepen.</li>
+    </ul>
+    <p>Positie, snelheid, koers en tijd komen automatisch van de GPS. Lengte en breedte (op 1 dm), vaarstatus en type pas je zelf aan als ze veranderen. Je bent zelf verantwoordelijk voor wat je uitzendt.</p>
+    <div class="key">AIS is <strong>niet geschikt als navigatiemiddel</strong>. Ook een koppeling tussen AIS en het blauwe bord wordt afgeraden.</div>`},
+  {type:'q', q:"Binnen welke tijd moet een defecte AIS gerepareerd zijn?", o:["48 uur","24 uur","7 dagen","Direct, je mag niet varen"], a:0, w:"Binnen 48 uur, en meld het via het marifoonblokkanaal."},
+  {type:'q', q:"Mag je AIS gebruiken als navigatiemiddel?", o:["Nee, AIS is daar niet betrouwbaar genoeg voor","Ja, in navigatiemodus","Ja, bij slecht zicht","Alleen op ruim water"], a:0, w:"AIS is niet geschikt als navigatiemiddel."},
+
+  {type:'info', h:"Uitval van apparatuur", html:`
+    <p><strong>Radar valt uit bij slecht zicht:</strong> verminder direct de snelheid en communiceer duidelijk via de marifoon, zodat anderen weten dat jij hen niet ziet. Doorvaren mag alleen waar varen zonder radar bij slecht zicht is toegestaan: met verminderde snelheid, een <strong>uitkijk voorop</strong> met goedgekeurde spreekverbinding, en zonder gevaar. Anders ga je op de dichtstbijzijnde geschikte plaats stilliggen.</p>
+    <p><strong>Stuurwerk valt uit:</strong> over op de <strong>noodbesturing</strong>. Roep een tweede persoon met radarkennis in de stuurhut, want je hebt geen eenmansbediening meer. Ga zo snel mogelijk veilig stilliggen.</p>
+    <p><strong>AIS valt uit:</strong> laat het snel repareren en gebruik de marifoon extra nauwkeurig, want anderen zien je niet meer op hun ECDIS.</p>`},
+  {type:'q', q:"Je radar valt uit bij slecht zicht. Wat doe je eerst?", o:["Snelheid verminderen en via de marifoon melden dat je zonder radar vaart","Gewoon doorvaren op dezelfde snelheid","Het AIS uitzetten","Ankeren midden in de vaargeul"], a:0, w:"Eerst snelheid omlaag en duidelijk communiceren. Daarna doorvaren met uitkijk waar dat mag, of stilliggen."},
+
+  {type:'info', h:"Varen met een roerganger", html:`
+    <p>Het varen met een roerganger wordt volgens de EU-regels getoetst met vragen <strong>direct na het praktijkexamen</strong>.</p>
+    <p><strong>Procedure:</strong></p>
+    <ul><li><strong>Order:</strong> de schipper geeft een order.</li><li><strong>Uitvoering:</strong> de roerganger herhaalt de order en voert hem direct uit.</li><li><strong>Bevestiging:</strong> na uitvoering herhaalt de roerganger de order een tweede keer.</li></ul>
+    <p>Herhalen is er om <strong>misverstanden te voorkomen</strong>. De roerganger blijft de order uitvoeren tot een tegenorder. Reageert het schip niet, dan meldt hij dat direct.</p>
+    <p>Er zijn <strong>drie soorten orders</strong>:</p>
+    <ul>
+      <li><strong>Stuurorders:</strong> de schipper geeft een koers of een <strong>aansturingspunt</strong> (bij goed zicht, op rivier of ruim water). De roerganger bepaalt zelf het roer.</li>
+      <li><strong>Roerorders:</strong> richting (BB of SB) plus het aantal graden, bijvoorbeeld <em>"Stuurboord één-vijf"</em>. Afgelezen op de <strong>roerstandaanwijzer</strong>.</li>
+      <li><strong>Orders voor de bochtaanwijzer:</strong> zijde plus graden per minuut, bijvoorbeeld <em>"Bochtaanwijzer stuurboord nul-vijf"</em>; de roerganger stelt de piloot in.</li>
+    </ul>`},
+  {type:'q', q:"Welke drie soorten orders kan de roerganger krijgen?", o:["Stuurorders, roerorders en orders voor de bochtaanwijzer","Stuurorders, machineorders en ankerorders","Roerorders, VHF-orders en radarorders","Koersorders, snelheidsorders en stoporders"], a:0, w:"Stuurorders, roerorders en BAW-orders."},
+  {type:'q', q:"Waarom herhaalt de roerganger elke order?", o:["Om misverstanden te voorkomen","Omdat de schipper het anders vergeet","Voor het logboek","Omdat het reglement dat alleen 's nachts vraagt"], a:0, w:"Herhalen voorkomt misverstanden."},
+
+  {type:'info', h:"Roercommando's", html:`
+    <div class="tbl"><table><tr><th>Commando</th><th>Betekenis</th></tr>
+      <tr><td>Midscheeps</td><td>Roer terug tot 0</td></tr>
+      <tr><td>Stuurboord</td><td>Roer naar SB</td></tr>
+      <tr><td>Hard stuurboord</td><td>Roer naar SB &gt; 45°</td></tr>
+      <tr><td>Bakboord</td><td>Roer naar BB</td></tr>
+      <tr><td>Hard bakboord</td><td>Roer naar BB &gt; 45°</td></tr>
+      <tr><td>Recht zo die gaat</td><td>Draaiing opheffen, voorliggende koers houden</td></tr></table></div>
+    <p><strong>Rustig sturen:</strong> geen grote roeruitslagen, anders draait het schip te snel en gaat het slingeren. Een snel varend schip heeft <strong>minder</strong> roer nodig, een langzaam varend schip <strong>meer</strong>. Daarom is varen op de rivierpiloot beter.</p>
+    <p><strong>Wisselen van de wacht:</strong> de roerganger geeft de voorliggende koers, het aansturingspunt of de ingestelde draaiing door aan de nieuwe roerganger, en meldt de wissel aan de schipper.</p>`},
+  {type:'q', q:"Wat betekent de order 'Recht zo die gaat'?", o:["De draaiende beweging opheffen en de voorliggende koers aanhouden","Het roer midscheeps zetten en wachten","Volle kracht vooruit","Terug naar de vorige koers"], a:0, w:"De roerganger heft de draaiing op en blijft de voorliggende koers sturen."},
+  {type:'q', q:"Geef je bij een snel of een langzaam varend schip meer roer?", o:["Bij een langzaam varend schip","Bij een snel varend schip","Altijd evenveel","Dat hangt alleen af van de wind"], a:0, w:"Langzaam varend schip: meer roer nodig."}
+  ],
+  test:[
+    {q:"Wat wordt verstaan onder 'invloedssfeer'?", o:["Het gebied dat een schip nodig heeft om veilig te varen en tijdig te stoppen","De padbreedte in een bocht","Het bereik van de marifoon","De dode hoek vóór het schip"], a:0, w:"Afhankelijk van manoeuvreermogelijkheden en omstandigheden."},
+    {q:"Wat wordt verstaan onder 'padbreedte'?", o:["De breedte van de vaarbaan die het schip werkelijk inneemt","De breedte van de vaarweg","De scheepsbreedte","De afstand tot de oever"], a:0, w:"Recht ca. 1,5 × de scheepsbreedte."},
+    {q:"Wat gebeurt met de padbreedte in een bocht of bij dwarswind?", o:["Die wordt snel groter","Die wordt kleiner","Die blijft gelijk","Die wordt nul"], a:0, w:"Door drift en opsturen wordt de padbreedte groter."},
+    {q:"Wat is een aansturingspunt?", o:["Een referentiepunt aan de horizon waarop je aanstuurt bij een koerswijziging","Het snijpunt van de kiellijn met de eerste afstandsring","Het punt waar de tegenligger je kiellijn kruist","De plaats van de scanner op het scherm"], a:0, w:"Een referentiepunt aan de horizon dat je gebruikt bij het wijzigen van koers. Hoe verder weg, hoe beter."},
+    {q:"Wat is de minimale afstand tot een aansturingspunt om goed koers te houden?", o:["Ongeveer 20 × de scheepslengte","2 × de scheepslengte","100 meter","1 kilometer"], a:0, w:"Ongeveer 20 × de scheepslengte; onder 4-5 × niet bruikbaar."},
+    {q:"Je vaart afvarend met stuurboordwal. Welke kiellijnafstanden passen bij een BB-bocht en een SB-bocht?", o:["BB-bocht 400 m, SB-bocht 600 m","BB-bocht 600 m, SB-bocht 400 m","Beide 500 m","BB-bocht 200 m, SB-bocht 200 m"], a:0, w:"In een SB-bocht ligt de buitenbocht aan bakboord, dus verder weg: langere kiellijnafstand (600 m). In een BB-bocht korter (400 m). Zet de VRM op 500 m om beide ringen in één oogopslag te zien."},
+    {q:"Welke kiellijnafstand is langer?", o:["Met de buitenbocht aan bakboord","Met de buitenbocht aan stuurboord","Ze zijn gelijk","Afhankelijk van het bereik"], a:0, w:"Door SB-wal houden ligt de BB-oever verder: langere kiellijnafstand."},
+    {q:"Wanneer wordt een passage met een tegenligger in de buitenbocht echt gevaarlijk?", o:["Bij gelijke kiellijnafstanden","Als de tegenligger 10 lengten langer kiellijnafstand heeft","Als de tegenligger stil ligt","Alleen bij lange puls"], a:0, w:"Kritisch bij 2-4 lengten verschil, gevaarlijk bij gelijke afstanden."},
+    {q:"Is een bochtaanwijzer bij radarvaart verplicht?", o:["Ja, het BPR en RPR schrijven een bochtaanwijzer voor","Nee, hij wordt alleen aanbevolen","Alleen voor duwstellen langer dan 110 m","Alleen op de Westerschelde"], a:0, w:"Ja, het BPR en het RPR schrijven hem voor bij radarvaart."},
+    {q:"Wat geeft een bochtaanwijzer (BAW) aan?", o:["De draaisnelheid van het schip in graden per minuut","De roerstand in graden","De koers ten opzichte van het noorden","De zijdelingse verplaatsing"], a:0, w:"Draaisnelheid in °/min."},
+    {q:"Wanneer geeft een ROT niets aan terwijl het schip vaart?", o:["Bij zijdelingse verplaatsing door drift zonder koersverandering","Bij achteruit varen in een bocht","Bij een bocht naar bakboord","Bij slecht zicht"], a:0, w:"Drift zonder draaiing; gebruik de Dopplerlog."},
+    {q:"Het schip slingert op ruim water en de rivierpiloot stuurt mee. Wat helpt?", o:["De demping van de stuurmachine inschakelen","De BAW resetten","De STC opendraaien","Het bereik verkleinen"], a:0, w:"Demping voorkomt onnodig roer geven."},
+    {q:"Binnen hoeveel tijd moet een BAW operationeel zijn?", o:["4 minuten","1 minuut","10 minuten","30 seconden"], a:0, w:"ES-TRIN art. 3.01: binnen 4 minuten."},
+    {q:"Welk BAW-meetbereik gebruikt een duwstel volgens de schaalverdeling?", o:["30°/min","90°/min","300°/min","180°/min"], a:0, w:"30°/min duwstel, 90°/min Europaschip, 300°/min patrouillevaartuig."},
+    {q:"Wat is een radar met relatieve beeldpresentatie?", o:["Een radar waarbij het beeld gerelateerd is aan de beweging van het eigen schip","Een radar met het noorden boven","Een radar die alleen bewegende echo's toont","Een radar gekoppeld aan AIS"], a:0, w:"Alles beweegt ten opzichte van het eigen schip; de oever trekt voorbij."},
+    {q:"Hoe herken je op ruim water aanvaringsgevaar?", o:["De relatieve baan van de echo is op je centrum gericht (peiling blijft gelijk bij afnemende afstand)","De echo wordt kleiner","De echo verdwijnt even","De echo krijgt een morseteken"], a:0, w:"Volg met EBL en VRM: gelijkblijvende peiling en afnemende afstand = gevaar."},
+    {q:"Wat doe je in de observatieruimte (1000-2000 m) als de situatie onduidelijk is?", o:["Direct de snelheid verlagen","Snelheid verhogen","Niets, pas reageren in de veiligheidsruimte","Hard stuurboord geven"], a:0, w:"Langzamer varen geeft meer tijd voor observatie."},
+    {q:"Welke ruimte loopt van 0 tot 400 meter?", o:["De veiligheidsruimte","De reactieruimte","De observatieruimte","De invloedssfeer"], a:0, w:"Alleen noodmanoeuvres mogelijk."},
+    {q:"Welke stap hoort bij 'positie twijfelachtig' in het stappenschema?", o:["Snelheid afnemen en VHF-melding","Doorgaan","Direct ankeren","Bereik vergroten"], a:0, w:"Daarna, zonder antwoord op 1000-800 m: manoeuvreersnelheid, VHF en geluidsein."},
+    {q:"Wat doe je als de situatie op korte afstand niet beter wordt?", o:["Stoppen, mistseinen geven en koerssignaal","Harder varen om voor te gaan","De radar op standby zetten","Niets doen"], a:0, w:"Stoppen, mistseinen, koerssignaal."},
+    {q:"Hoeveel aanvaringen bij slecht zicht komen door slechte communicatie?", o:["9 van de 10","1 van de 10","De helft","Geen"], a:0, w:"9 van de 10."},
+    {q:"Wat betekent 'afvaart'?", o:["Varend met de (eb)stroom mee","Varend tegen de stroom in","Achteruit varend","Keren met de stroom mee"], a:0, w:"Afvaart = met de stroom mee; opvaart = tegen de stroom in."},
+    {q:"Wat betekent 'kop voor nemen'?", o:["Keren met de (eb)stroom mee","Keren tegen de stroom in","Afmeren met de kop stroomopwaarts","Achteruit varen"], a:0, w:"Kop voor nemen = keren met de stroom mee."},
+    {q:"Wat betekent 'overstuur'?", o:["Achteruit varend","Met te veel roer","Tegen de stroom in","Midscheeps"], a:0, w:"Overstuur de haven in of uit = achteruit varend."},
+    {q:"Wat betekent 'Standby' van de VTS?", o:["Je moet wachten op antwoord","Het gesprek is afgelopen","Je mag doorvaren","Herhaal je melding"], a:0, w:"'Begrepen, uit' = einde gesprek; 'Over' = antwoord verwacht."},
+    {q:"Welke gegevens komen automatisch via GPS in het AIS?", o:["Positie, snelheid en koers over de grond, en tijd","Scheepsnaam en MMSI","Lengte en breedte","Vaarstatus"], a:0, w:"Naam/MMSI bij installatie, lengte/breedte/status zelf bijhouden."},
+    {q:"Wat doe je als je stuurwerk uitvalt?", o:["Over op noodbesturing, tweede persoon erbij roepen en veilig stilliggen","Doorvaren op de rivierpiloot","Alleen het AIS uitzetten","Ankeren in de vaargeul"], a:0, w:"Noodbesturing; geen eenmansbediening meer mogelijk."},
+    {q:"Wat zijn de drie stappen van de roergangerprocedure?", o:["Order, uitvoering (herhalen), bevestiging (2e keer herhalen)","Vraag, antwoord, controle","Melden, wachten, varen","Order, uitvoering, logboek"], a:0, w:"Order → herhalen en uitvoeren → na uitvoering nog eens herhalen."},
+    {q:"Wat wordt bij een stuurorder bij goed zicht aangegeven?", o:["Een aansturingspunt","Het aantal graden roer","De draaisnelheid","De motortoerental"], a:0, w:"Een aansturingspunt, bijvoorbeeld een boei of brug."},
+    {q:"Waaruit bestaat een roerorder (behalve midscheeps)?", o:["De richting (BB of SB) en de roerstand in graden","Alleen de richting","De koers in graden","De draaisnelheid per minuut"], a:0, w:"Bijvoorbeeld 'Bakboord één-vijf'."},
+    {q:"Wat betekent de order 'Bochtaanwijzer stuurboord één-nul'?", o:["De roerganger stelt de piloot zo in dat de BAW 10°/min naar stuurboord aanwijst","Het roer 10 graden naar stuurboord","10 graden van koers naar stuurboord","Het schip 10 meter naar stuurboord"], a:0, w:"Een BAW-order geeft de draaisnelheid."},
+    {q:"Wat betekent 'Midscheeps'?", o:["Het roer terugdraaien tot de roerstandaanwijzer op 0 staat","De koers houden","Volle kracht vooruit","Het schip in het midden van de vaarweg leggen"], a:0, w:"Roer naar 0."},
+    {q:"Wat betekent 'Hard bakboord'?", o:["Roer naar bakboord, meer dan 45 graden","Roer naar bakboord, 15 graden","Snel naar bakboord draaien met de BAW op 30","Koers 270 graden"], a:0, w:"Hard = meer dan 45 graden."},
+    {q:"Wat geef je door bij wisseling van de roerganger?", o:["De voorliggende koers, het aansturingspunt of de ingestelde draaiing","Alleen je naam","De AIS-gegevens","Het bereik van de radar"], a:0, w:"En je meldt de wissel aan de schipper."}
+  ]},
+{ id:5, title:"Binnenvaartpolitiereglement", sub:"BPR-artikelen over radar en slecht zicht",
+  steps:[
+  {type:'info', h:"Uitrusting: art. 4.05 en 4.06", html:`
+    <p>Wil je in Nederland op radar varen, dan moet het schip aan een paar eisen voldoen (BPR art. 4.06):</p>
+    <ul>
+      <li>een <strong>radarinstallatie</strong>, of <strong>Inland ECDIS</strong> in navigatiemodus, die geschikt is voor de binnenvaart;</li>
+      <li>een <strong>bochtaanwijzer</strong> (rate of turn indicator);</li>
+      <li>in het stuurhuis iemand met een <strong>radarpatent</strong>.</li>
+    </ul>
+    <p><strong>Oefenen</strong> op radar bij <strong>goed zicht</strong> mag ook zonder radarpatenthouder.</p>
+    <p>Art. 4.05 regelt de <strong>marifoon</strong>. Op de vaarwegen van <strong>bijlage 9</strong> moet je tijdens het varen <strong>op twee kanalen</strong> uitluisteren: het kanaal schip-schip en het kanaal voor nautische informatie.</p>
+    <div class="key">Radarvaren = radar (of Inland ECDIS) + bochtaanwijzer + radarpatenthouder.</div>`},
+  {type:'q', q:"Wat is volgens het BPR nodig om op radar te mogen varen?", o:["Radar of Inland ECDIS, een bochtaanwijzer en een radarpatenthouder","Radar, AIS en een tweede marifoon aan boord","Radar, een roerganger en een uitkijk op het voorschip","Radar, een kompas en een tweede radarscherm"], a:0, w:"Radarinstallatie of Inland ECDIS in navigatiemodus, een bochtaanwijzer en iemand met radarpatent in het stuurhuis."},
+  {type:'q', q:"Mag je zonder radarpatent op radar oefenen?", o:["Ja, maar alleen bij goed zicht","Nee, nooit","Ja, ook bij slecht zicht als je langzaam vaart","Alleen op de Westerschelde"], a:0, w:"Oefenen bij goed zicht mag zonder radarpatenthouder."},
+
+  {type:'info', h:"Varen bij slecht zicht: art. 6.29 en 6.30", html:`
+    <p>Op de vaarwegen van <strong>bijlage 9</strong> geldt bij slecht zicht: je vaart <strong>op radar</strong>, of je gaat naar de <strong>dichtstbijzijnde geschikte plaats</strong> en gaat daar stilliggen. Houd daarbij het vaarwater vrij.</p>
+    <p>Wie op radar vaart, past zijn <strong>snelheid aan</strong> aan het zicht, het overige verkeer en de plaatselijke omstandigheden.</p>
+    <div class="key">Slecht zicht: radarvaren met aangepaste snelheid, of zo snel mogelijk een veilige ligplaats zoeken buiten het vaarwater.</div>`},
+  {type:'q', q:"Wat moet je volgens het BPR doen bij slecht zicht als je niet op radar kunt varen?", o:["Naar de dichtstbijzijnde geschikte plaats gaan en stilliggen, met het vaarwater vrij","Doorvaren met een uitkijk op het voorschip en geluidsseinen","Stoppen midden in het vaarwater en het anker laten vallen","Langzaam doorvaren tot het zicht beter wordt"], a:0, w:"Naar de dichtstbijzijnde geschikte ligplaats en daar stilliggen, met het vaarwater vrij."},
+
+  {type:'info', h:"Stilliggende schepen: art. 6.31", html:`
+    <p>Een schip dat bij slecht zicht <strong>stilligt</strong> in of nabij het vaarwater, geeft een <strong>reeks klokslagen</strong> als het een naderend schip hoort. Dat sein herhaal je <strong>hoogstens elke minuut</strong>.</p>
+    <p>Een <strong>zeeschip</strong> mag daarnaast <strong>kort-lang-kort</strong> geven.</p>`},
+  {type:'q', q:"Welk sein geeft een stilliggend schip bij slecht zicht als het een schip hoort naderen?", o:["Een reeks klokslagen, hoogstens elke minuut","Eén lange stoot, elke twee minuten","Twee lange stoten, elke minuut","Vier korte stoten, elke dertig seconden"], a:0, w:"Een reeks klokslagen, herhaald met tussenpozen van hoogstens één minuut."},
+
+  {type:'info', h:"Varen op radar: art. 6.32", html:`
+    <p>In het stuurhuis zijn bij radarvaart <strong>twee personen</strong> nodig, van wie één een radarpatent heeft. Staat op het certificaat <em>"goedgekeurd voor het voeren van het schip met behulp van radar door één persoon"</em>, dan hoeft de tweede persoon alleen <strong>beschikbaar</strong> te zijn.</p>
+    <p>Zie je een schip op de radar dat je tegemoet komt, <strong>meld je dan</strong> op het kanaal schip-schip met:</p>
+    <ul><li>naam van het schip;</li><li>positie;</li><li>vaarrichting;</li><li>of je een groot, klein, snel of bijzonder groot schip bent.</li></ul>
+    <p>Spreek daarna de <strong>passeerwijze</strong> af. Standaard is dat <strong>bakboord op bakboord</strong>, en het kanaal schip-schip is meestal <strong>kanaal 10</strong>.</p>
+    <p><strong>Geen marifooncontact?</strong> Geef <strong>één lange stoot</strong> (een veerpont: één lange en vier korte), verminder vaart en stop zo nodig.</p>
+    <p>In een samenstel geldt dit alleen voor het schip waar de <strong>schipper van het samenstel</strong> aan boord is.</p>`},
+  {type:'q', q:"Wat geef je door als je op radar een tegemoetkomend schip ziet?", o:["Naam, positie, vaarrichting en of je groot, klein, snel of bijzonder groot bent","Naam, lading, diepgang en eindbestemming van de reis","Alleen je naam en het kanaal waarop je uitluistert","Je koers in graden en je snelheid in km/u"], a:0, w:"Naam, positie, vaarrichting en het soort schip. Daarna spreek je de passeerwijze af."},
+  {type:'q', q:"Je hebt geen marifooncontact met een naderend schip. Wat doe je?", o:["Eén lange stoot geven, vaart verminderen en zo nodig stoppen","Twee korte stoten geven en uitwijken naar bakboord","De mistklok luiden en doorvaren op dezelfde koers","Vier korte stoten geven en volle kracht achteruit"], a:0, w:"Eén lange stoot, vaart verminderen en zo nodig stoppen. Een veerpont geeft één lange en vier korte stoten."},
+
+  {type:'info', h:"Varen zonder radar: art. 6.33", html:`
+    <p>Moet je bij slecht zicht <strong>zonder radar</strong> verder varen naar een ligplaats (kleine schepen mogen dat):</p>
+    <ul>
+      <li>geef <strong>één lange stoot</strong>, hoogstens <strong>elke minuut</strong>;</li>
+      <li>zet een <strong>uitkijk op het voorschip</strong>;</li>
+      <li><strong>beantwoord</strong> oproepen op de marifoon;</li>
+      <li>houd de <strong>oever</strong>, of ga zo snel mogelijk uit het vaarwater.</li>
+    </ul>`},
+  {type:'q', q:"Welk geluidssein geeft een schip dat bij slecht zicht zonder radar vaart?", o:["Eén lange stoot, hoogstens elke minuut","Twee lange stoten, elke twee minuten","Een reeks klokslagen, elke minuut","Kort-lang-kort, elke dertig seconden"], a:0, w:"Eén lange stoot, herhaald met tussenpozen van hoogstens één minuut."},
+
+  {type:'info', h:"Radarreflector en meldplicht: art. 9.04 en 9.07", html:`
+    <p><strong>Art. 9.04:</strong> op de wateren in <strong>Zuid-Holland en Zeeland</strong> en in de <strong>zeehavens</strong> moeten kleine schepen bij slecht zicht een <strong>radarreflector</strong> voeren. Op de <strong>Westerschelde</strong> moet dat <strong>ook bij goed zicht</strong>.</p>
+    <p><strong>Art. 9.07</strong> regelt de <strong>meld- en uitluisterplicht</strong> (IVS90). Die geldt onder meer voor:</p>
+    <ul><li>schepen met <strong>gevaarlijke stoffen</strong>;</li><li>schepen of samenstellen <strong>langer dan 110 m</strong>;</li><li>hotelschepen en bijzondere transporten;</li><li>tankschepen, containerschepen en zeeschepen.</li></ul>
+    <div class="key">Een blokgebied herken je aan bord <strong>B11</strong> met <span class="mono">VHF 18</span>: daar meld je je op het aangegeven kanaal.</div>`},
+  {type:'q', q:"Waar moet een klein schip ook bij goed zicht een radarreflector voeren?", o:["Op de Westerschelde","Op de Waal","Op alle kanalen","In de havens van Amsterdam"], a:0, w:"Op de Westerschelde ook bij goed zicht; elders in Zuid-Holland, Zeeland en de zeehavens bij slecht zicht."}
+  ],
+  test:[
+    {q:"Welke uitrusting is volgens het BPR nodig om op radar te varen?", o:["Radar of Inland ECDIS en een bochtaanwijzer","Radar en AIS","Radar en een tweede marifoon","Radar en een dieptemeter"], a:0, w:"Radar (of Inland ECDIS in navigatiemodus) en een bochtaanwijzer, plus een radarpatenthouder."},
+    {q:"Wie moet er bij radarvaart in het stuurhuis zijn?", o:["Een radarpatenthouder","Een matroos met marifooncertificaat","Een loods","De eigenaar van het schip"], a:0, w:"Een persoon met een radarpatent."},
+    {q:"Wanneer mag je zonder radarpatenthouder op radar varen?", o:["Bij goed zicht om te oefenen","Bij slecht zicht met lage snelheid","Op kanalen zonder stroming","Nooit"], a:0, w:"Alleen oefenen bij goed zicht."},
+    {q:"Op hoeveel marifoonkanalen luister je uit op de vaarwegen van bijlage 9?", o:["Twee: schip-schip en nautische informatie","Eén: kanaal 10","Drie: 10, 16 en het blokkanaal","Geen, alleen bij slecht zicht"], a:0, w:"Op twee kanalen: schip-schip en nautische informatie."},
+    {q:"Wat doe je bij slecht zicht op een bijlage 9-vaarweg zonder radar?", o:["Naar de dichtstbijzijnde geschikte plaats en stilliggen","Doorvaren met geluidsseinen","Ankeren midden in het vaarwater","Achter een radarschip aan varen"], a:0, w:"Zo snel mogelijk naar een geschikte ligplaats, met het vaarwater vrij."},
+    {q:"Welke snelheid houd je aan als je op radar vaart?", o:["Een snelheid aangepast aan zicht, verkeer en omstandigheden","Altijd de helft van de normale snelheid","Altijd minimaal 10 km/u","Je normale snelheid"], a:0, w:"Een aangepaste snelheid."},
+    {q:"Welk sein geeft een stilliggend schip als het bij slecht zicht een schip hoort naderen?", o:["Een reeks klokslagen","Eén lange stoot","Twee lange stoten","Vier korte stoten"], a:0, w:"Een reeks klokslagen, hoogstens elke minuut herhaald."},
+    {q:"Welk extra sein mag een stilliggend zeeschip geven?", o:["Kort-lang-kort","Lang-kort-lang","Drie lange stoten","Twee korte stoten"], a:0, w:"Kort-lang-kort."},
+    {q:"Wanneer hoeft de tweede persoon in het stuurhuis alleen beschikbaar te zijn?", o:["Als het certificaat vermeldt dat het schip door één persoon op radar gevoerd mag worden","Als het schip korter is dan 40 m","Als het zicht meer dan 1 km is","Als de schipper twee radarpatenten heeft"], a:0, w:"Bij de vermelding 'goedgekeurd voor het voeren van het schip met behulp van radar door één persoon'."},
+    {q:"Wat geef je door als je een tegemoetkomend schip op de radar ziet?", o:["Naam, positie, vaarrichting en soort schip","Lading en bestemming","Alleen je positie","Je snelheid en diepgang"], a:0, w:"Naam, positie, vaarrichting en of je groot, klein, snel of bijzonder groot bent."},
+    {q:"Wat is de standaard passeerwijze bij radarvaart volgens het BPR?", o:["Bakboord op bakboord","Stuurboord op stuurboord","De opvarende bepaalt het","Wie het eerst meldt bepaalt"], a:0, w:"Bakboord op bakboord, tenzij anders afgesproken."},
+    {q:"Op welk kanaal meld je je meestal voor schip-schip?", o:["Kanaal 10","Kanaal 16","Kanaal 18","Kanaal 22"], a:0, w:"Kanaal 10."},
+    {q:"Welk sein geef je als je geen marifooncontact krijgt met een naderend schip?", o:["Eén lange stoot","Twee lange stoten","Vijf korte stoten","Kort-lang-kort"], a:0, w:"Eén lange stoot, vaart verminderen en zo nodig stoppen."},
+    {q:"Welk sein geeft een veerpont zonder marifooncontact?", o:["Eén lange en vier korte stoten","Eén lange stoot","Twee lange stoten","Een reeks klokslagen"], a:0, w:"Eén lange stoot gevolgd door vier korte."},
+    {q:"Welk schip van een samenstel moet de meldingen doen?", o:["Het schip waar de schipper van het samenstel aan boord is","Elk schip van het samenstel","Het voorste schip","Het achterste schip"], a:0, w:"Alleen het schip met de schipper van het samenstel."},
+    {q:"Wat doet een schip dat bij slecht zicht zonder radar vaart?", o:["Eén lange stoot per minuut, uitkijk voorop, marifoon beantwoorden, oever houden","Doorvaren op normale snelheid","Stilliggen midden in het vaarwater","Alleen de lichten voeren"], a:0, w:"Lange stoot, uitkijk, marifoon, oever houden of uit het vaarwater gaan."},
+    {q:"Waar moet de uitkijk staan bij varen zonder radar?", o:["Op het voorschip","In het stuurhuis","Op het achterschip","Op de wal"], a:0, w:"Op het voorschip, waar hij het best kan zien en horen."},
+    {q:"Waar moeten kleine schepen bij slecht zicht een radarreflector voeren?", o:["Op de wateren in Zuid-Holland en Zeeland en in de zeehavens","Alleen op de Rijn","Op alle Nederlandse vaarwegen","Nergens, het is vrijwillig"], a:0, w:"Zuid-Holland, Zeeland en de zeehavens (art. 9.04); op de Westerschelde ook bij goed zicht."},
+    {q:"Voor welke schepen geldt de meldplicht van art. 9.07?", o:["Onder meer schepen met gevaarlijke stoffen en schepen langer dan 110 m","Alleen recreatievaart","Alleen zeeschepen","Alleen schepen met radar"], a:0, w:"Gevaarlijke stoffen, langer dan 110 m, hotelschepen, bijzondere transporten, tankers, containerschepen en zeeschepen."},
+    {q:"Hoe herken je een blokgebied met meldplicht?", o:["Aan bord B11 met 'VHF 18'","Aan een gele boei","Aan een geel knipperlicht","Aan bord A1"], a:0, w:"Bord B11 met het kanaalnummer, bijvoorbeeld VHF 18."},
+    {q:"Hoe vaak herhaal je het mistsein volgens het BPR?", o:["Hoogstens elke minuut","Hoogstens elke twee minuten","Elke dertig seconden","Elke vijf minuten"], a:0, w:"BPR: hoogstens elke minuut. Op de Westerschelde (SRW) is dat hoogstens elke twee minuten."}
+  ]},
+{ id:6, title:"Rijnvaartpolitiereglement", sub:"RPR-artikelen over radar en slecht zicht",
+  steps:[
+  {type:'info', h:"Marifoon: art. 4.05", html:`
+    <p>Op de Rijn moet <strong>elk motorschip</strong> een <strong>marifoon</strong> hebben. Alleen <strong>kleine schepen</strong> zijn uitgezonderd.</p>
+    <p>Je spreekt de <strong>taal van het land</strong> waar je vaart. Lukt dat niet, dan gebruik je <strong>Duits</strong>.</p>
+    <div class="key">Je luistert uit op <strong>twee kanalen</strong>, met <strong>twee marifoons</strong>: schip-schip en nautische informatie.</div>`},
+  {type:'q', q:"Welke taal gebruik je op de Rijn als je de taal van het land niet spreekt?", o:["Duits","Engels","Frans","Nederlands"], a:0, w:"De taal van het land, en bij problemen Duits."},
+
+  {type:'info', h:"Radar en patent: art. 4.06", html:`
+    <p>Een schip mag alleen op radar varen met:</p>
+    <ul>
+      <li>een <strong>radar</strong> en een <strong>bochtaanwijzer</strong> die voldoen aan <strong>ES-TRIN</strong> (artikel 7.06);</li>
+      <li>een radarpatenthouder of iemand met een <strong>erkend diploma</strong> in het stuurhuis.</li>
+    </ul>
+    <p>Ook hier mag je bij <strong>goed zicht oefenen</strong> zonder patent.</p>
+    <div class="key"><strong>Snelle schepen</strong> (sneller dan 40 km/u) moeten <strong>altijd</strong> op radar varen, ook bij goed zicht.</div>`},
+  {type:'q', q:"Welke schepen moeten op de Rijn altijd op radar varen?", o:["Snelle schepen, sneller dan 40 km/u","Schepen langer dan 110 m","Schepen met gevaarlijke stoffen","Duwstellen met meer dan vier bakken"], a:0, w:"Snelle schepen (meer dan 40 km/u) varen altijd op radar."},
+
+  {type:'info', h:"Slecht zicht: art. 6.30 en 6.31", html:`
+    <p>Bij slecht zicht moeten <strong>alle schepen</strong> op radar varen, met een <strong>aangepaste snelheid</strong>. Kleine schepen luisteren uit op <strong>kanaal 10</strong>.</p>
+    <p>Een schip <strong>zonder radar</strong> zoekt <strong>direct een ligplaats</strong>. Onderweg daarheen:</p>
+    <ul>
+      <li>houd de <strong>oever</strong>;</li>
+      <li>geef het <strong>mistsein</strong> (één lange stoot), hoogstens <strong>elke minuut</strong>;</li>
+      <li>zet een <strong>uitkijk</strong>;</li>
+      <li>luister uit op de marifoon en meld dat je <strong>niet op radar</strong> vaart.</li>
+    </ul>
+    <p><strong>Stilliggen</strong> (art. 6.31): luister uit op de marifoon en geef je positie door als er een schip nadert. Zonder marifoon geef je een <strong>reeks klokslagen</strong>, hoogstens elke minuut.</p>
+    <div class="key">Ligt je schip bij slecht zicht ten anker, dan mag je <strong>niet gaan slapen</strong>: er moet wacht zijn.</div>`},
+  {type:'q', q:"Wat doet een stilliggend schip met marifoon als het bij slecht zicht een schip hoort naderen?", o:["Het geeft zijn positie door via de marifoon","Het geeft twee lange stoten","Het zet alle lichten uit","Het gaat direct varen"], a:0, w:"Uitluisteren en de positie doorgeven. Zonder marifoon: een reeks klokslagen."},
+  {type:'q', q:"Mag de bemanning bij slecht zicht gaan slapen als het schip ten anker ligt?", o:["Nee, er moet wacht worden gehouden","Ja, als de ankerlichten branden","Ja, als de marifoon aan staat","Ja, buiten het vaarwater altijd"], a:0, w:"Nee. Bij slecht zicht ten anker houd je wacht."},
+
+  {type:'info', h:"Ontmoeten en voorbijlopen: art. 6.32 en 6.33", html:`
+    <p>Op de Rijn meldt de <strong>opvarende</strong> zich en <strong>bepaalt de opvarende</strong> de passeerwijze.</p>
+    <p>Op trajecten met <strong>geregelde ontmoetingen</strong> passeer je <strong>bakboord op bakboord</strong>. Elders kan ook <strong>stuurboord op stuurboord</strong> afgesproken worden.</p>
+    <p>Geen contact? Geef <strong>één lange stoot</strong> en <strong>verminder vaart</strong>.</p>
+    <p>Art. 6.33: bij slecht zicht houd je zoveel mogelijk de <strong>zijkant van het vaarwater</strong>.</p>
+    <div class="key">Rijn: <strong>opvaart bepaalt</strong>.</div>`},
+  {type:'q', q:"Wie bepaalt op de Rijn bij radarvaart de passeerwijze?", o:["De opvarende","De afvarende","Het grootste schip","Wie zich het eerst meldt"], a:0, w:"De opvarende meldt zich en bepaalt."},
+
+  {type:'info', h:"Stuurboordwal en ligverboden: art. 9.11", html:`
+    <p>Benedenstrooms van <strong>Spijksche Veer</strong> (km 857,40) houd je bij slecht zicht <strong>stuurboordwal</strong>.</p>
+    <p>Die <strong>stuurboordwalplicht bij slecht zicht</strong> geldt op alle Nederlandse vaarwegen.</p>
+    <p>Op de <strong>Waal, Rijn en Lek</strong> gelden bovendien <strong>ankerverboden en ligverboden</strong> op bepaalde trajecten.</p>`},
+  {type:'q', q:"Vanaf welk punt houd je op de Rijn bij slecht zicht stuurboordwal?", o:["Vanaf Spijksche Veer (km 857,40)","Vanaf Lobith (km 862)","Vanaf Nijmegen (km 884)","Vanaf de Pannerdensche Kop (km 867)"], a:0, w:"Benedenstrooms van Spijksche Veer, km 857,40."}
+  ],
+  test:[
+    {q:"Welke schepen moeten op de Rijn een marifoon hebben?", o:["Alle motorschepen behalve kleine schepen","Alleen schepen langer dan 110 m","Alleen schepen met radar","Alle schepen, ook kleine"], a:0, w:"Elk motorschip, met uitzondering van kleine schepen."},
+    {q:"Welke taal gebruik je op de Rijn op de marifoon?", o:["De taal van het land, bij problemen Duits","Altijd Engels","Altijd Nederlands","Altijd Duits"], a:0, w:"De taal van het land; lukt dat niet, dan Duits."},
+    {q:"Op hoeveel kanalen luister je op de Rijn uit tijdens de vaart?", o:["Twee, met twee marifoons","Eén, kanaal 10","Drie","Alleen kanaal 16"], a:0, w:"Twee kanalen (schip-schip en nautische informatie) met twee marifoons."},
+    {q:"Aan welke eisen moeten radar en bochtaanwijzer op de Rijn voldoen?", o:["ES-TRIN, artikel 7.06","De eisen van het BPR bijlage 9","De SOLAS-eisen voor zeeschepen","Er zijn geen eisen"], a:0, w:"ES-TRIN artikel 7.06."},
+    {q:"Wie moet er op de Rijn bij radarvaart in het stuurhuis zijn?", o:["Iemand met een radarpatent of erkend diploma","Een loods","Twee matrozen","De eigenaar"], a:0, w:"Een radarpatenthouder of iemand met een erkend diploma."},
+    {q:"Welke schepen varen op de Rijn altijd op radar?", o:["Snelle schepen (meer dan 40 km/u)","Tankschepen","Zeeschepen","Passagiersschepen"], a:0, w:"Snelle schepen, ook bij goed zicht."},
+    {q:"Wat doet een schip zonder radar bij slecht zicht op de Rijn?", o:["Direct een ligplaats zoeken","Doorvaren met mistsein","Achter een ander schip aan varen","Midden in het vaarwater ankeren"], a:0, w:"Direct een ligplaats zoeken."},
+    {q:"Wat doet een schip zonder radar onderweg naar een ligplaats?", o:["Oever houden, mistsein, uitkijk en melden dat het niet op radar vaart","Vol vooruit om snel binnen te zijn","Alleen de lichten voeren","Stoppen en wachten"], a:0, w:"Oever houden, mistsein hoogstens elke minuut, uitkijk, marifoon en melden 'niet op radar'."},
+    {q:"Op welk kanaal luisteren kleine schepen bij slecht zicht op de Rijn uit?", o:["Kanaal 10","Kanaal 16","Kanaal 18","Kanaal 22"], a:0, w:"Kanaal 10."},
+    {q:"Wat doet een stilliggend schip zonder marifoon bij slecht zicht?", o:["Een reeks klokslagen geven, hoogstens elke minuut","Eén lange stoot geven","Twee lange stoten geven","Niets"], a:0, w:"Een reeks klokslagen."},
+    {q:"Wat geldt voor de bemanning van een ankerligger bij slecht zicht?", o:["Er moet wacht worden gehouden; niet gaan slapen","Iedereen mag slapen","Alleen de schipper mag slapen","Alleen bij nacht wacht houden"], a:0, w:"Niet gaan slapen: wacht houden."},
+    {q:"Wie meldt zich als eerste op de Rijn bij een radarontmoeting?", o:["De opvarende","De afvarende","Het kleinste schip","De walpost"], a:0, w:"De opvarende meldt en bepaalt."},
+    {q:"Welke passeerwijze geldt op trajecten met geregelde ontmoetingen?", o:["Bakboord op bakboord","Stuurboord op stuurboord","De afvarende bepaalt","Geen vaste passeerwijze"], a:0, w:"Bakboord op bakboord."},
+    {q:"Is stuurboord op stuurboord passeren op de Rijn bij radarvaart mogelijk?", o:["Ja, buiten trajecten met geregelde ontmoetingen, na afspraak","Nee, nooit","Alleen voor snelle schepen","Alleen bij goed zicht"], a:0, w:"Ja, buiten de trajecten met geregelde ontmoetingen."},
+    {q:"Wat doe je als je geen contact krijgt met een tegenligger?", o:["Eén lange stoot geven en vaart verminderen","Twee korte stoten geven","Volle kracht vooruit","De mistklok luiden"], a:0, w:"Eén lange stoot en vaart verminderen."},
+    {q:"Waar houd je je bij slecht zicht in het vaarwater (art. 6.33)?", o:["Zoveel mogelijk aan de zijkant van het vaarwater","Midden in het vaarwater","Aan bakboordzijde","Waar het diepst is"], a:0, w:"Aan de zijkant van het vaarwater."},
+    {q:"Benedenstrooms van welk punt houd je op de Rijn bij slecht zicht stuurboordwal?", o:["Spijksche Veer","Lobith","Emmerich","Tiel"], a:0, w:"Spijksche Veer, km 857,40."},
+    {q:"Waar geldt de stuurboordwalplicht bij slecht zicht?", o:["Op alle Nederlandse vaarwegen","Alleen op de Waal","Alleen op kanalen","Alleen op de Westerschelde"], a:0, w:"Op alle Nederlandse vaarwegen."},
+    {q:"Op welke rivieren gelden volgens art. 9.11 anker- en ligverboden?", o:["Waal, Rijn en Lek","Maas en IJssel","Noordzeekanaal en Amsterdam-Rijnkanaal","Westerschelde"], a:0, w:"Waal, Rijn en Lek."},
+    {q:"Mag je op de Rijn zonder patent bij goed zicht op radar oefenen?", o:["Ja","Nee","Alleen met een loods","Alleen 's nachts"], a:0, w:"Ja, oefenen bij goed zicht mag."}
+  ]},
+{ id:7, title:"Scheepvaartreglement Westerschelde", sub:"SRW-artikelen bij beperkt zicht",
+  steps:[
+  {type:'info', h:"Beperkt zicht en veilige snelheid", html:`
+    <p><strong>Art. 2.2k:</strong> beperkt zicht is elke toestand waarbij het zicht beperkt is door <strong>mist, nevel, sneeuw, zware regenbuien, rook of damp</strong>.</p>
+    <p><strong>Art. 6:</strong> elk schip vaart <strong>altijd</strong> met een <strong>veilige snelheid</strong>, zodat het op tijd kan stoppen of uitwijken. Daarbij let iedereen op het zicht, de verkeersdichtheid, de manoeuvreerbaarheid, de lichten op de achtergrond, wind, stroom en diepgang.</p>
+    <p>Een schip met radar let <strong>extra</strong> op:</p>
+    <ul>
+      <li>de <strong>beperkingen</strong> van de radar en het gekozen <strong>bereik</strong>;</li>
+      <li>storing door golfslag en neerslag (<strong>clutter</strong>);</li>
+      <li>dat <strong>kleine schepen en ijs</strong> soms niet worden waargenomen;</li>
+      <li>het <strong>aantal</strong> en de bewegingen van de schepen op de radar;</li>
+      <li>dat de radar helpt het <strong>zicht te beoordelen</strong>.</li>
+    </ul>
+    <div class="key">Op de Westerschelde moet een schip met radar die <strong>ook bij goed zicht</strong> gebruiken.</div>`},
+  {type:'q', q:"Wat valt volgens het SRW onder beperkt zicht?", o:["Mist, nevel, sneeuw, zware regenbuien, rook en damp","Alleen dichte mist","Alleen het donker","Alleen zicht onder de 100 meter"], a:0, w:"Elke toestand met beperkt zicht door mist, nevel, sneeuw, zware regenbuien, rook of damp."},
+  {type:'q', q:"Wanneer gebruik je op de Westerschelde de radar?", o:["Altijd, ook bij goed zicht","Alleen bij beperkt zicht","Alleen 's nachts","Alleen in het vaarwater van de zeeschepen"], a:0, w:"Een schip met radar gebruikt die op de Westerschelde ook bij goed zicht."},
+
+  {type:'info', h:"Aanvaringsgevaar: art. 7", html:`
+    <p>Gebruik <strong>alle beschikbare middelen</strong> om te bepalen of er gevaar voor aanvaring is.</p>
+    <div class="key">Bij twijfel neem je aan dat er <strong>wel gevaar</strong> is.</div>
+    <p>Trek geen conclusies uit <strong>schaarse radarinformatie</strong>. Volg een echo dus lang genoeg voordat je besluit wat je doet.</p>
+    <p>Uitkijk houden doe je met <strong>zicht, gehoor en alle beschikbare middelen</strong>. Wie een marifoon heeft, maakt gebruik van de informatie van de <strong>verkeerscentrales</strong> (VTS-kanalen) en de nautische berichtgeving.</p>`},
+  {type:'q', q:"Je twijfelt of er gevaar voor aanvaring is. Wat neem je aan?", o:["Dat er wel gevaar voor aanvaring is","Dat er geen gevaar is zolang de echo zwak is","Dat het andere schip uitwijkt","Dat het een valse echo is"], a:0, w:"Bij twijfel neem je aan dat er gevaar voor aanvaring is."},
+
+  {type:'info', h:"Gedrag bij beperkt zicht: art. 19", html:`
+    <p>Bij beperkt zicht:</p>
+    <ul>
+      <li>vaar je <strong>op radar</strong> of ga je <strong>stilliggen</strong>;</li>
+      <li>houd je de <strong>machines klaar</strong> om direct te manoeuvreren;</li>
+      <li>neem je <strong>tijdig maatregelen</strong> om een aanvaring te voorkomen;</li>
+      <li>hoor je een <strong>mistsein vóór de dwarslijn</strong>, dan verminder je vaart tot de <strong>minimale stuursnelheid</strong>.</li>
+    </ul>`},
+  {type:'q', q:"Je hoort een mistsein vóór de dwarslijn. Wat doe je?", o:["Vaart verminderen tot minimale stuursnelheid","Vol vooruit om snel voorbij te zijn","Koers houden en snelheid houden","Twee korte stoten geven en naar bakboord sturen"], a:0, w:"Vaart terug tot de minimale snelheid waarbij je nog kunt sturen."},
+
+  {type:'info', h:"Geluidsseinen bij beperkt zicht: art. 35", html:`
+    <p>Op de Westerschelde geef je de mistseinen <strong>hoogstens elke 2 minuten</strong> (in het BPR is dat elke minuut).</p>
+    <div class="tbl"><table><tr><th>Situatie</th><th>Sein</th></tr>
+      <tr><td>Varend, vaart lopend</td><td>1 lange stoot</td></tr>
+      <tr><td>Varend, gestopt</td><td>2 lange stoten, ca. 2 s ertussen</td></tr>
+      <tr><td>Beperkt schip*</td><td>1 lang + 2 kort</td></tr>
+      <tr><td>Gesleept schip</td><td>1 lang + 3 kort</td></tr>
+      <tr><td>Ten anker</td><td>klok 5 s, hoogstens elke minuut; ≥ 100 m ook gong achter</td></tr>
+      <tr><td>Aan de grond</td><td>3 klokslagen voor en na de klok</td></tr></table></div>
+    <p>* Onmanoeuvreerbaar, beperkt in manoeuvreren, bijzonder groot zeeschip, zeilschip, vissend of slepend.</p>
+    <p>Een ankerligger mag extra <strong>kort-lang-kort</strong> geven. Een schip aan de grond mag <strong>2 kort + 1 lang</strong> geven.</p>
+    <div class="key">Onthoud: <strong>SRW 2 minuten, BPR 1 minuut</strong>.</div>`},
+  {type:'q', q:"Welk sein geeft een varend schip dat gestopt ligt bij beperkt zicht op de Westerschelde?", o:["2 lange stoten met ongeveer 2 seconden ertussen","1 lange stoot","1 lange en 2 korte stoten","Een reeks klokslagen"], a:0, w:"Gestopt en varend: twee lange stoten met ongeveer 2 seconden tussenpoos, hoogstens elke 2 minuten."},
+  {type:'q', q:"Hoe vaak geef je op de Westerschelde het mistsein?", o:["Hoogstens elke 2 minuten","Hoogstens elke minuut","Elke 30 seconden","Elke 5 minuten"], a:0, w:"SRW: hoogstens elke 2 minuten. BPR: hoogstens elke minuut."}
+  ],
+  test:[
+    {q:"Wat wordt in het SRW verstaan onder beperkt zicht?", o:["Zicht beperkt door mist, nevel, sneeuw, zware regenbuien, rook of damp","Alleen mist","Zicht minder dan 1000 m","Alleen het nachtelijke donker"], a:0, w:"Art. 2.2k: mist, nevel, sneeuw, zware regenbuien, rook en damp."},
+    {q:"Wanneer moet een schip volgens het SRW een veilige snelheid aanhouden?", o:["Altijd","Alleen bij beperkt zicht","Alleen 's nachts","Alleen in drukke gebieden"], a:0, w:"Altijd."},
+    {q:"Waarop let een schip met radar extra bij het bepalen van een veilige snelheid?", o:["Beperkingen en bereik van de radar, clutter en kleine schepen die niet zichtbaar zijn","Alleen de diepgang","De kleur van de echo's","Het aantal bemanningsleden"], a:0, w:"Beperkingen, bereik, clutter, kleine schepen en ijs, het aantal echo's en het beoordelen van het zicht."},
+    {q:"Moet je op de Westerschelde de radar ook bij goed zicht gebruiken?", o:["Ja, als het schip een radar heeft","Nee, alleen bij beperkt zicht","Alleen zeeschepen","Alleen 's nachts"], a:0, w:"Ja, een schip met radar gebruikt die ook bij goed zicht."},
+    {q:"Hoe bepaal je volgens het SRW of er aanvaringsgevaar is?", o:["Met alle beschikbare middelen","Alleen met de radar","Alleen op zicht","Alleen via de marifoon"], a:0, w:"Met alle beschikbare middelen."},
+    {q:"Wat neem je aan als je twijfelt over aanvaringsgevaar?", o:["Dat het gevaar bestaat","Dat het gevaar niet bestaat","Dat het andere schip uitwijkt","Dat de radar een fout maakt"], a:0, w:"Bij twijfel bestaat het gevaar."},
+    {q:"Mag je conclusies trekken uit schaarse radarinformatie?", o:["Nee","Ja, als de echo sterk is","Ja, bij goed zicht","Ja, op korte afstand"], a:0, w:"Nee, geen conclusies uit schaarse radarinformatie."},
+    {q:"Hoe houd je volgens het SRW uitkijk?", o:["Met zicht, gehoor en alle beschikbare middelen","Alleen met de radar","Alleen met de marifoon","Alleen op zicht"], a:0, w:"Zicht, gehoor en alle beschikbare middelen."},
+    {q:"Van welke marifooninformatie maak je op de Westerschelde gebruik?", o:["De VTS-kanalen van de verkeerscentrales en nautische informatie","Alleen kanaal 16","Alleen kanaal 10","Geen, alleen de radar telt"], a:0, w:"De VTS-kanalen en de nautische informatie."},
+    {q:"Wat doe je bij beperkt zicht op de Westerschelde als je niet op radar kunt varen?", o:["Stilliggen","Doorvaren met mistsein","Achter een ander schip aanvaren","Midden in het vaarwater ankeren"], a:0, w:"Op radar varen of stilliggen."},
+    {q:"Wat houd je klaar bij beperkt zicht?", o:["De machines, om direct te manoeuvreren","Het anker","De reddingsboot","De verrekijker"], a:0, w:"De machines klaar voor direct manoeuvreren."},
+    {q:"Wat doe je als je een mistsein vóór de dwarslijn hoort?", o:["Vaart verminderen tot minimale stuursnelheid","Koers en snelheid houden","Vol vooruit","Naar stuurboord draaien"], a:0, w:"Vaart verminderen tot de minimale stuursnelheid."},
+    {q:"Welk sein geeft een varend schip met vaart bij beperkt zicht op de Westerschelde?", o:["1 lange stoot","2 lange stoten","1 lang + 2 kort","Een reeks klokslagen"], a:0, w:"1 lange stoot, hoogstens elke 2 minuten."},
+    {q:"Welk sein geeft een varend schip dat gestopt ligt?", o:["2 lange stoten, ca. 2 seconden ertussen","1 lange stoot","1 lang + 3 kort","Kort-lang-kort"], a:0, w:"2 lange stoten."},
+    {q:"Welk sein geeft een onmanoeuvreerbaar of slepend schip bij beperkt zicht?", o:["1 lang + 2 kort","1 lang + 3 kort","2 lang","1 lang"], a:0, w:"1 lange en 2 korte stoten."},
+    {q:"Welk sein geeft een gesleept schip bij beperkt zicht?", o:["1 lang + 3 kort","1 lang + 2 kort","2 lang + 1 kort","3 kort"], a:0, w:"1 lange en 3 korte stoten."},
+    {q:"Welk sein geeft een schip ten anker bij beperkt zicht?", o:["5 seconden de klok luiden, hoogstens elke minuut","1 lange stoot elke 2 minuten","2 lange stoten","3 klokslagen"], a:0, w:"Klok 5 seconden, hoogstens elke minuut; schepen van 100 m of meer ook de gong achter."},
+    {q:"Welke ankerliggers geven ook een gong achter op het schip?", o:["Schepen van 100 m of langer","Alle schepen","Alleen tankers","Schepen korter dan 50 m"], a:0, w:"Schepen van 100 m of meer."},
+    {q:"Welk extra sein mag een ankerligger geven om een naderend schip te waarschuwen?", o:["Kort-lang-kort","Lang-kort-lang","Vijf korte stoten","Twee lange stoten"], a:0, w:"Kort-lang-kort."},
+    {q:"Welk sein geeft een schip aan de grond?", o:["3 klokslagen voor en na het luiden van de klok","1 lange stoot","2 lange stoten","Alleen de gong"], a:0, w:"3 afzonderlijke klokslagen voor en na de klok; eventueel 2 kort + 1 lang."},
+    {q:"Hoe vaak geef je op de Westerschelde het mistsein voor een varend schip?", o:["Hoogstens elke 2 minuten","Hoogstens elke minuut","Elke 30 seconden","Elke 3 minuten"], a:0, w:"SRW: elke 2 minuten (BPR: elke minuut)."}
+  ]}
+];
+
+/* ============ FIGUREN ============ */
+function svgWave(){
+  let d="M10 60";
+  for(let x=0;x<=300;x+=4){d+=` L${10+x} ${60-30*Math.sin(x/150*2*Math.PI)}`}
+  return `<svg viewBox="0 0 320 110" role="img" aria-label="Sinusgolf met golflengte">
+    <line x1="10" y1="60" x2="315" y2="60" stroke="var(--muted)" stroke-width="1.5"/>
+    <path d="${d}" fill="none" stroke="var(--echo)" stroke-width="3"/>
+    <line x1="47.5" y1="22" x2="47.5" y2="30" stroke="var(--ink)" stroke-width="1.5"/>
+    <line x1="197.5" y1="22" x2="197.5" y2="30" stroke="var(--ink)" stroke-width="1.5"/>
+    <line x1="47.5" y1="18" x2="197.5" y2="18" stroke="var(--ink)" stroke-width="1.5"/>
+    <text x="122" y="13" text-anchor="middle" font-size="13" fill="var(--ink)" font-family="IBM Plex Mono, monospace">λ</text>
+    <line x1="235" y1="60" x2="235" y2="30" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="242" y="48" font-size="11" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">amplitude</text>
+    <text x="308" y="78" font-size="11" fill="var(--muted)" text-anchor="end" font-family="Atkinson Hyperlegible, sans-serif">tijd →</text>
+  </svg>`;
+}
+function svgBlock(){
+  const box=(x,y,w,t)=>`<rect x="${x}" y="${y}" width="${w}" height="30" rx="6" fill="var(--surface)" stroke="var(--navy)" stroke-width="1.5"/><text x="${x+w/2}" y="${y+19.5}" text-anchor="middle" font-size="11.5" fill="var(--ink)" font-family="Atkinson Hyperlegible, sans-serif" font-weight="700">${t}</text>`;
+  return `<svg viewBox="0 0 340 170" role="img" aria-label="Blokschema radarinstallatie">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--navy)"/></marker></defs>
+    <rect x="240" y="8" width="90" height="12" rx="6" fill="var(--navy)"/><rect x="278" y="20" width="14" height="14" fill="var(--navy)"/>
+    <text x="285" y="48" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">scanner</text>
+    <line x1="232" y1="10" x2="150" y2="10" stroke="var(--echo)" stroke-width="2" marker-end="url(#ar)"/><text x="190" y="6" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">puls</text>
+    <line x1="150" y1="24" x2="232" y2="24" stroke="var(--echo)" stroke-width="2" marker-end="url(#ar)"/><text x="190" y="38" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="Atkinson Hyperlegible, sans-serif">echo</text>
+    ${box(4,70,100,"Synchronisatie")}${box(124,70,80,"Zender")}${box(226,100,108,"Zend/ontvang")}${box(124,130,80,"Ontvanger")}${box(4,130,100,"Scherm")}
+    <line x1="104" y1="85" x2="122" y2="85" stroke="var(--navy)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <path d="M204 85 H280 V98" fill="none" stroke="var(--navy)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="285" y1="34" x2="285" y2="98" stroke="var(--navy)" stroke-width="1.5"/>
+    <path d="M260 130 V145 H206" fill="none" stroke="var(--navy)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="124" y1="145" x2="106" y2="145" stroke="var(--navy)" stroke-width="1.5" marker-end="url(#ar)"/>
+    <line x1="54" y1="100" x2="54" y2="128" stroke="var(--navy)" stroke-width="1.5"/>
+  </svg>`;
+}
+
+/* ============ OPSLAG ============ */
+const KEY="radarcursus-v1";
+let S={passed:{},pos:{},stats:{}};
+try{const r=localStorage.getItem(KEY); if(r) S=Object.assign(S,JSON.parse(r));}catch(e){}
+if(!S.stats||typeof S.stats!=='object') S.stats={};
+function st(id){return S.stats[id]||(S.stats[id]={tries:0,passes:0,last:null})}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+/* ============ HELPERS ============ */
+const app=document.getElementById('app');
+const bar=document.getElementById('bar');
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function prep(q){const idx=shuffle(q.o.map((_,i)=>i));return {...q,order:idx}}
+function isOpen(ch){return !!ch.steps}
+function setBar(title,count,pct){bar.hidden=false;$('#barTitle').textContent=title;$('#barCount').textContent=count||'';$('#progFill').style.width=(pct||0)+'%'}
+function toTop(){window.scrollTo({top:0,behavior:'instant'in window?'instant':'auto'})}
+
+/* ============ OVERZICHT ============ */
+function home(){
+  bar.hidden=true;
+  const rows=CHAPTERS.map(ch=>{
+    const passed=!!S.passed[ch.id], open=isOpen(ch), t=S.stats[ch.id];
+    let pill, cls='', meta='';
+    if(!ch.steps){pill='<span class="pill lock">Volgt</span>'}
+    else {pill=`<span class="pill go">${S.pos[ch.id]?'Verder':'Oefenen'}</span>`;cls=passed?'open passed':'open'}
+    if(t&&t.tries){
+      const l=t.last, lt=l?(l.wrong===0?'laatst geslaagd':`laatst ${l.wrong} fout`):'';
+      meta=`<span class="meta">${t.passes}× geslaagd · ${t.tries}× getoetst${lt?' · '+lt:''}</span>`;
+    }
+    return `<button class="ch ${cls}" data-ch="${ch.id}" ${open?'':'disabled'}>
+      <span class="num">${passed?'✓':ch.id}</span>
+      <span class="t"><b>${esc(ch.title)}</b><span>${esc(ch.sub)}</span>${meta}</span>${pill}</button>`;
+  }).join('');
+  const done=Object.keys(S.passed).length;
+  app.innerHTML=`
+    <section class="hero">
+      <div><div class="eyebrow">Varen met behulp van radar</div><h1>Radarcursus Binnenvaart</h1>
+      <p>Oefen de theorie voor het radarexamen. <span class="mono">${done}/7</span> hoofdstukken geslaagd.</p></div>
+      <div class="scope" aria-hidden="true">${scopeSvg()}<div class="sweep"></div></div>
+    </section>
+    <div class="chapters">${rows}</div>
+    <div class="howto">
+      <p><b>Zo werkt het.</b> Elk hoofdstuk wisselt korte stukjes uitleg af met één of twee vragen. Aan het eind volgt een eindtoets van ${TEST_N} vragen. Heb je ze <b>allemaal goed</b>, dan ben je geslaagd. Alle hoofdstukken staan open: oefen ze in elke volgorde en zo vaak als je wilt.</p>
+      <p>Je voortgang wordt op deze telefoon bewaard.</p>
+      <button class="linkbtn" id="resetBtn">Voortgang wissen</button>
+    </div>`;
+  app.querySelectorAll('.ch:not([disabled])').forEach(b=>b.onclick=()=>chapterStart(+b.dataset.ch));
+  const rb=$('#resetBtn');
+  rb.onclick=()=>{
+    if(rb.dataset.armed){S={passed:{},pos:{},stats:{}};save();home();return}
+    rb.dataset.armed='1';rb.textContent='Weet je het zeker? Tik nogmaals om alles te wissen';
+  };
+  toTop();
+}
+function scopeSvg(){
+  const rings=[14,28,42].map(r=>`<circle cx="56" cy="56" r="${r}" fill="none" stroke="var(--scope-ring)" stroke-width="1"/>`).join('');
+  return `<svg viewBox="0 0 112 112">${rings}<line x1="56" y1="56" x2="56" y2="2" stroke="var(--scope-echo)" stroke-width="1.2" opacity=".8"/>
+    <path d="M40 98 Q44 70 46 52 Q47 36 44 14" fill="none" stroke="var(--scope-echo)" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+    <path d="M72 100 Q68 74 68 56 Q69 38 74 16" fill="none" stroke="var(--scope-echo)" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+    <rect x="58" y="30" width="4" height="9" rx="1" fill="var(--scope-echo)"/></svg>`;
+}
+
+/* ============ LESSEN ============ */
+let cur=null; // {ch, i}
+function chapterStart(id){
+  const ch=CHAPTERS.find(c=>c.id===id);
+  cur={ch,i:Math.min(S.pos[id]||0,ch.steps.length)};
+  if(S.passed[id]) cur.i=0;
+  renderStep();
+}
+function renderStep(){
+  const {ch,i}=cur, n=ch.steps.length;
+  if(i>=n) return testIntro();
+  S.pos[ch.id]=i; save();
+  const st=ch.steps[i];
+  setBar(`H${ch.id} · ${ch.title}`,`${i+1}/${n+1}`,(i/(n+1))*100);
+  if(st.type==='info'){
+    app.innerHTML=`<article class="card"><div class="kicker"><span class="eyebrow">Uitleg</span></div><h2>${st.h}</h2><div class="body">${st.html}</div></article>
+      <div class="actions"><button class="btn" id="next">Verder</button>${i>0?'<button class="btn ghost" id="prev">Vorige</button>':'<button class="btn ghost" id="skip">Direct naar de eindtoets</button>'}</div>`;
+    $('#next').onclick=()=>{cur.i++;renderStep()};
+    if(i>0) $('#prev').onclick=()=>{cur.i--;renderStep()};
+    else $('#skip').onclick=()=>{cur.i=n;renderStep()};
+  } else {
+    const q=prep(st);
+    app.innerHTML=`<article class="card"><span class="qtag">● Vraag</span><p class="qtext">${esc(q.q)}</p><div class="opts" id="opts"></div><div id="fb"></div></article>
+      <div class="actions"><button class="btn" id="next" disabled>Kies een antwoord</button><button class="btn ghost" id="prev">Vorige</button></div>`;
+    drawOpts(q,(pick)=>{
+      const ok=pick===q.a;
+      markOpts(q,pick);
+      $('#fb').innerHTML=`<div class="fb ${ok?'ok':'bad'}"><b>${ok?'Goed!':'Niet goed.'}</b>${esc(q.w)}</div>`;
+      const nb=$('#next'); nb.disabled=false; nb.textContent='Verder';
+      nb.onclick=()=>{cur.i++;renderStep()};
+    });
+    $('#prev').onclick=()=>{cur.i--;renderStep()};
+  }
+  toTop();
+}
+function drawOpts(q,onPick,immediate=true){
+  const box=$('#opts'); const L='ABCD';
+  box.innerHTML=q.order.map((oi,k)=>`<button class="opt" data-oi="${oi}"><span class="l">${L[k]}</span><span>${esc(q.o[oi])}</span></button>`).join('');
+  box.querySelectorAll('.opt').forEach(b=>b.onclick=()=>onPick(+b.dataset.oi,b));
+}
+function markOpts(q,pick){
+  document.querySelectorAll('#opts .opt').forEach(b=>{
+    const oi=+b.dataset.oi; b.disabled=true;
+    if(oi===q.a) b.classList.add('right'); else if(oi===pick) b.classList.add('wrong');
+  });
+}
+
+/* ============ EINDTOETS ============ */
+let T=null;
+function testIntro(){
+  const {ch}=cur, n=ch.steps.length;
+  setBar(`H${ch.id} · ${ch.title}`,`${n+1}/${n+1}`,(n/(n+1))*100);
+  const N=Math.min(TEST_N,ch.test.length);
+  app.innerHTML=`<article class="card"><span class="eyebrow">Eindtoets</span><h2>Eindtoets hoofdstuk ${ch.id}</h2>
+    <div class="body"><p>Je krijgt <strong>${N} vragen</strong> achter elkaar over ${esc(ch.title.toLowerCase())}. Pas aan het eind zie je wat je goed en fout had.</p>
+    <p>Heb je <strong>alle ${N} vragen goed</strong>, dan ben je geslaagd. Zo niet, dan zie je hoeveel je fout had en wat het juiste antwoord was. Je kunt de eindtoets zo vaak doen als je wilt, steeds met andere vragen.</p></div></article>
+    <div class="actions"><button class="btn echo" id="go">Start eindtoets</button><button class="btn ghost" id="prev">Lesstof nog eens doorlopen</button></div>`;
+  $('#go').onclick=startTest;
+  $('#prev').onclick=()=>{cur.i=0;renderStep()};
+  toTop();
+}
+function startTest(){
+  const ch=cur.ch, N=Math.min(TEST_N,ch.test.length);
+  T={ch,qs:shuffle(ch.test).slice(0,N).map(prep),ans:[],i:0};
+  renderTestQ();
+}
+function renderTestQ(){
+  const {ch,qs,i}=T, q=qs[i];
+  setBar(`Eindtoets H${ch.id}`,`${i+1}/${qs.length}`,(i/qs.length)*100);
+  app.innerHTML=`<article class="card"><span class="qtag">● Vraag ${i+1} van ${qs.length}</span><p class="qtext">${esc(q.q)}</p><div class="opts" id="opts"></div></article>
+    <div class="actions"><button class="btn" id="next" disabled>Kies een antwoord</button></div>`;
+  let pick=T.ans[i];
+  drawOpts(q,(oi,btn)=>{
+    pick=oi;
+    document.querySelectorAll('#opts .opt').forEach(b=>b.classList.toggle('sel',b===btn));
+    const nb=$('#next'); nb.disabled=false; nb.textContent=i<qs.length-1?'Volgende vraag':'Inleveren';
+  });
+  $('#next').onclick=()=>{T.ans[i]=pick; T.i++; if(T.i<qs.length) renderTestQ(); else testResult();};
+  toTop();
+}
+function testResult(){
+  const {ch,qs,ans}=T;
+  const wrong=qs.map((q,k)=>({q,p:ans[k]})).filter(x=>x.p!==x.q.a);
+  const score=qs.length-wrong.length, ok=wrong.length===0;
+  const t=st(ch.id); t.tries++; if(ok) t.passes++; t.last={score,n:qs.length,wrong:wrong.length,at:Date.now()};
+  if(ok){S.passed[ch.id]=true; S.pos[ch.id]=0;}
+  save();
+  setBar(`Eindtoets H${ch.id}`,'',100);
+  const next=CHAPTERS.find(c=>c.id===ch.id+1);
+  app.innerHTML=`<section class="result">
+      <span class="eyebrow">Resultaat</span>
+      <div class="score ${ok?'ok':'bad'}">${score}/${qs.length}</div>
+      <h2>${ok?'Geslaagd!':'Nog niet geslaagd'}</h2>
+      <p>${ok?'Alle vragen goed.':`Je had <strong>${wrong.length} ${wrong.length===1?'vraag':'vragen'} fout</strong>. Lees hieronder de juiste antwoorden en probeer het opnieuw.`}</p>
+      <p class="tally">Hoofdstuk ${ch.id}: <span class="mono">${t.passes}×</span> geslaagd van <span class="mono">${t.tries}×</span> getoetst</p>
+    </section>
+    ${ok?'':`<div class="review">${wrong.map(x=>`<div class="rv"><b>${esc(x.q.q)}</b><span class="y">Jouw antwoord: ${esc(x.q.o[x.p])}</span><span class="a">Juist: ${esc(x.q.o[x.q.a])}</span><span>${esc(x.q.w)}</span></div>`).join('')}</div>`}
+    <div class="actions">
+      ${ok&&next&&next.steps?`<button class="btn echo" id="nextCh">Naar hoofdstuk ${next.id}</button>`:''}
+      <button class="btn ${ok?'ghost':'echo'}" id="retry">Eindtoets opnieuw</button>
+      ${ok?'':'<button class="btn ghost" id="study">Lesstof doorlopen</button>'}
+      <button class="btn ghost" id="home">Naar overzicht</button>
+    </div>`;
+  if($('#retry')) $('#retry').onclick=startTest;
+  if($('#study')) $('#study').onclick=()=>{cur.i=0;renderStep()};
+  if($('#nextCh')) $('#nextCh').onclick=()=>chapterStart(next.id);
+  $('#home').onclick=home;
+  toTop();
+}
+
+$('#backBtn').onclick=home;
+home();
+</script>
+
+</body>
+</html>
