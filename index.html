@@ -154,6 +154,51 @@ figure{margin:0}
 .rv .a{color:var(--ok);font-weight:700}
 .rv .y{color:var(--bad)}
 .intro-list{margin:0;padding-left:1.2em}
+/* Grote eindtoets */
+.bigexam{margin-top:20px;display:grid;grid-template-columns:52px 1fr;gap:14px;align-items:center;width:100%;text-align:left;padding:16px;border-radius:14px;border:2px solid var(--echo);background:linear-gradient(135deg,var(--echo-soft),var(--surface));cursor:pointer}
+.bigexam .medal{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:var(--echo);color:#1b1404;font:700 1.05rem var(--f-display)}
+.bigexam.passed .medal{background:var(--ok);color:var(--surface)}
+.bigexam b{display:block;font:700 1.2rem/1.2 var(--f-display)}
+.bigexam span.s{font-size:.88rem;color:var(--muted)}
+.bigexam .meta{display:block;margin-top:4px;font-family:var(--f-mono);font-size:.74rem;color:var(--muted)}
+.rv .chl{font:700 .72rem var(--f-display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.rv.okrv{border-left-color:var(--ok)}
+.norm{display:flex;gap:10px;flex-wrap:wrap}
+.norm div{flex:1 1 120px;background:var(--bg);border-radius:10px;padding:10px 12px}
+.norm b{display:block;font:700 1.6rem var(--f-mono)}
+.norm span{font-size:.85rem;color:var(--muted)}
+
+/* Feest */
+.party{position:fixed;inset:0;z-index:100;overflow:hidden;background:radial-gradient(ellipse at 50% 110%,#1d3550 0%,#0a1424 55%,#04070f 100%);opacity:0;transition:opacity .6s;touch-action:manipulation}
+.party.on{opacity:1}
+.party canvas{position:absolute;inset:0;width:100%;height:100%}
+.party .msg{position:absolute;left:0;right:0;top:max(28px,calc(env(safe-area-inset-top,0px) + 16px));text-align:center;color:#fff;padding:0 16px;pointer-events:none}
+.party .msg h2{font:700 clamp(2rem,9vw,3.4rem)/1.05 var(--f-display);color:#ffd36b;text-shadow:0 0 18px rgba(255,190,70,.7);animation:pop 1.2s cubic-bezier(.2,1.6,.4,1) both}
+.party .msg p{margin-top:8px;font-size:1.05rem;opacity:.9;animation:fadeup 1s .6s both}
+@keyframes pop{0%{transform:scale(.2);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes fadeup{0%{transform:translateY(12px);opacity:0}100%{transform:none;opacity:.9}}
+.party .glasses{position:absolute;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:min(300px,78vw);transform:translateX(-50%);pointer-events:none}
+.party .glasses svg{display:block;width:100%;height:auto;overflow:visible}
+.gl-l{transform-origin:60px 190px;animation:clinkL 2.6s ease-in-out infinite}
+.gl-r{transform-origin:180px 190px;animation:clinkR 2.6s ease-in-out infinite}
+@keyframes clinkL{0%,100%{transform:rotate(-6deg) translateX(-6px)}38%{transform:rotate(14deg) translateX(18px)}44%{transform:rotate(11deg) translateX(15px)}52%{transform:rotate(14deg) translateX(18px)}75%{transform:rotate(-6deg) translateX(-6px)}}
+@keyframes clinkR{0%,100%{transform:rotate(6deg) translateX(6px)}38%{transform:rotate(-14deg) translateX(-18px)}44%{transform:rotate(-11deg) translateX(-15px)}52%{transform:rotate(-14deg) translateX(-18px)}75%{transform:rotate(6deg) translateX(6px)}}
+.spark{transform-origin:120px 36px;animation:spark 2.6s ease-out infinite;opacity:0}
+@keyframes spark{0%,36%{opacity:0;transform:scale(.2)}40%{opacity:1;transform:scale(1.15)}56%{opacity:0;transform:scale(1.6)}100%{opacity:0}}
+.bub{animation:bub 1.8s linear infinite;opacity:0}
+@keyframes bub{0%{transform:translateY(0);opacity:0}15%{opacity:.9}100%{transform:translateY(-62px);opacity:0}}
+.splash{animation:splash 2.6s ease-out infinite;opacity:0}
+@keyframes splash{0%,38%{opacity:0;transform:translateY(0)}42%{opacity:1}70%{opacity:0;transform:translateY(-26px)}100%{opacity:0}}
+.balloon{position:absolute;bottom:-160px;width:var(--w,54px);height:calc(var(--w,54px)*1.22);border-radius:50% 50% 48% 48%/45% 45% 55% 55%;background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.75) 0 7%,transparent 18%),var(--c);box-shadow:inset -6px -10px 18px rgba(0,0,0,.25);animation:rise var(--d,9s) linear var(--dl,0s) forwards}
+.balloon::before{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-6px;border:6px solid transparent;border-bottom:8px solid var(--c);border-top:0}
+.balloon::after{content:"";position:absolute;left:50%;top:100%;margin-top:6px;width:1.5px;height:90px;background:rgba(255,255,255,.55);transform-origin:top;animation:string 1.4s ease-in-out infinite alternate}
+.balloon i{position:absolute;inset:0;animation:sway 3s ease-in-out infinite alternate}
+@keyframes rise{0%{transform:translate(0,0) rotate(-4deg)}25%{transform:translate(18px,-30vh) rotate(4deg)}50%{transform:translate(-14px,-62vh) rotate(-5deg)}75%{transform:translate(16px,-92vh) rotate(4deg)}100%{transform:translate(-6px,calc(-100vh - 320px)) rotate(-3deg)}}
+@keyframes string{from{transform:rotate(-8deg)}to{transform:rotate(8deg)}}
+.party .close{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));min-height:50px;padding:0 28px;border-radius:999px;border:2px solid rgba(255,255,255,.5);background:rgba(10,20,36,.6);color:#fff;font:700 1.05rem var(--f-display);cursor:pointer;backdrop-filter:blur(4px)}
+.party .snd{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:max(12px,env(safe-area-inset-top,0px));width:44px;height:44px;border-radius:50%;border:1.5px solid rgba(255,255,255,.4);background:rgba(10,20,36,.5);color:#fff;font-size:1.1rem;cursor:pointer}
+.party .timer{position:absolute;left:0;bottom:0;height:3px;background:#ffd36b;width:100%;transform-origin:left;animation:timer var(--dur,25s) linear forwards}
+@keyframes timer{to{transform:scaleX(0)}}
 </style>
 
 <div class="bar" id="bar" hidden>
@@ -1081,13 +1126,15 @@ function home(){
       <div class="scope" aria-hidden="true">${scopeSvg()}<div class="sweep"></div></div>
     </section>
     <div class="chapters">${rows}</div>
+    ${bigBtn()}
     <div class="sumlist"><span class="eyebrow">Samenvattingen</span><div class="chips">${CHAPTERS.map(c=>`<button class="chip" data-sum="${c.id}">H${c.id}</button>`).join('')}</div></div>
     <div class="howto">
-      <p><b>Zo werkt het.</b> Elk hoofdstuk wisselt korte stukjes uitleg af met één of twee vragen. Aan het eind volgt een eindtoets van ${TEST_N} vragen. Heb je ze <b>allemaal goed</b>, dan ben je geslaagd. Alle hoofdstukken staan open: oefen ze in elke volgorde en zo vaak als je wilt.</p>
+      <p><b>Zo werkt het.</b> Elk hoofdstuk wisselt korte stukjes uitleg af met één of twee vragen. Aan het eind volgt een eindtoets van ${TEST_N} vragen. Heb je ze <b>allemaal goed</b>, dan ben je geslaagd. Klaar voor het echte werk? Doe dan de <b>grote eindtoets</b>: ${BIG_N} vragen uit alle hoofdstukken, met maximaal ${BIG_MAX_WRONG} fout ben je geslaagd. Alle hoofdstukken staan open: oefen ze in elke volgorde en zo vaak als je wilt.</p>
       <p>Je voortgang wordt op deze telefoon bewaard.</p>
       <button class="linkbtn" id="resetBtn">Voortgang wissen</button>
     </div>`;
   app.querySelectorAll('.ch:not([disabled])').forEach(b=>b.onclick=()=>chapterStart(+b.dataset.ch));
+  $('#bigBtn').onclick=bigIntro;
   app.querySelectorAll('.chip[data-sum]').forEach(b=>b.onclick=()=>summary(+b.dataset.sum));
   const rb=$('#resetBtn');
   rb.onclick=()=>{
@@ -1095,6 +1142,12 @@ function home(){
     rb.dataset.armed='1';rb.textContent='Weet je het zeker? Tik nogmaals om alles te wissen';
   };
   toTop();
+}
+function bigBtn(){
+  const t=S.stats[BIG_ID], l=t&&t.last, passed=t&&t.passes>0;
+  const meta=t&&t.tries?`<span class="meta">${t.passes}× geslaagd · ${t.tries}× getoetst${l?' · laatst '+(l.wrong<=BIG_MAX_WRONG?'geslaagd':l.wrong+' fout'):''}</span>`:'';
+  return `<button class="bigexam ${passed?'passed':''}" id="bigBtn"><span class="medal">${passed?'✓':BIG_N}</span>
+    <span><b>Grote eindtoets</b><span class="s">${BIG_N} vragen uit alle hoofdstukken · maximaal ${BIG_MAX_WRONG} fout</span>${meta}</span></button>`;
 }
 function scopeSvg(){
   const rings=[14,28,42].map(r=>`<circle cx="56" cy="56" r="${r}" fill="none" stroke="var(--scope-ring)" stroke-width="1"/>`).join('');
@@ -1276,7 +1329,208 @@ function testResult(){
   toTop();
 }
 
-$('#backBtn').onclick=home;
+/* ============ GROTE EINDTOETS (alle hoofdstukken) ============ */
+const BIG_N=40, BIG_MAX_WRONG=6, BIG_ID='big';
+function bigPool(){
+  // Per hoofdstuk schudden en om de beurt trekken, zodat alle hoofdstukken aan bod komen.
+  const pools=CHAPTERS.filter(c=>c.test&&c.test.length).map(c=>shuffle(c.test).map(q=>({...q,ch:c.id})));
+  const out=[];
+  while(out.length<BIG_N&&pools.some(p=>p.length)){
+    for(const p of shuffle(pools)){ if(out.length>=BIG_N) break; if(p.length) out.push(p.shift()); }
+  }
+  return shuffle(out);
+}
+function bigIntro(){
+  const t=S.stats[BIG_ID];
+  setBar('Grote eindtoets','',0);
+  app.innerHTML=`<article class="card"><span class="eyebrow">Alle hoofdstukken</span><h2>Grote eindtoets</h2>
+    <div class="body"><p>Je krijgt <strong>${BIG_N} vragen</strong> door elkaar uit alle zeven hoofdstukken, net als op het examen. Pas aan het eind zie je je uitslag.</p>
+    <div class="norm"><div><b>${BIG_N}</b><span>vragen</span></div><div><b>${BIG_MAX_WRONG}</b><span>maximaal fout om te slagen</span></div></div>
+    <p>Na afloop zie je <strong>alle vragen die je fout had</strong>, met het juiste antwoord en uitleg. Neem er rustig de tijd voor: het duurt ongeveer 20 tot 30 minuten.</p>
+    ${t&&t.tries?`<p class="tally mono" style="color:var(--muted);font-size:.9rem">${t.passes}× geslaagd · ${t.tries}× getoetst</p>`:''}</div></article>
+    <div class="actions"><button class="btn echo" id="go">Start grote eindtoets</button><button class="btn ghost" id="home">Naar overzicht</button></div>`;
+  $('#go').onclick=startBig;
+  $('#home').onclick=home;
+  toTop();
+}
+function startBig(){
+  T={big:true,qs:bigPool().map(prep),ans:[],i:0};
+  renderBigQ();
+}
+function renderBigQ(){
+  const {qs,i}=T, q=qs[i];
+  setBar('Grote eindtoets',`${i+1}/${qs.length}`,(i/qs.length)*100);
+  app.innerHTML=`<article class="card"><span class="qtag">● Vraag ${i+1} van ${qs.length} · H${q.ch}</span><p class="qtext">${esc(q.q)}</p><div class="opts" id="opts"></div></article>
+    <div class="actions"><button class="btn" id="next" disabled>Kies een antwoord</button>${i>0?'<button class="btn ghost" id="prev">Vorige vraag</button>':''}</div>`;
+  let pick=T.ans[i];
+  const nb=$('#next');
+  const ready=()=>{nb.disabled=false; nb.textContent=i<qs.length-1?'Volgende vraag':'Inleveren';};
+  drawOpts(q,(oi,btn)=>{
+    pick=oi;
+    document.querySelectorAll('#opts .opt').forEach(b=>b.classList.toggle('sel',b===btn));
+    ready();
+  });
+  if(pick!=null){document.querySelectorAll('#opts .opt').forEach(b=>b.classList.toggle('sel',+b.dataset.oi===pick)); ready();}
+  nb.onclick=()=>{T.ans[i]=pick; T.i++; if(T.i<qs.length) renderBigQ(); else bigResult(true);};
+  if($('#prev')) $('#prev').onclick=()=>{T.ans[i]=pick; T.i--; renderBigQ();};
+  toTop();
+}
+function bigResult(fresh){
+  const {qs,ans}=T;
+  const wrong=qs.map((q,k)=>({q,p:ans[k]})).filter(x=>x.p!==x.q.a);
+  const score=qs.length-wrong.length, ok=wrong.length<=BIG_MAX_WRONG;
+  const t=st(BIG_ID);
+  if(fresh){ t.tries++; if(ok) t.passes++; t.last={score,n:qs.length,wrong:wrong.length,at:Date.now()}; save(); }
+  setBar('Grote eindtoets','',100);
+  const perCh=wrong.reduce((m,x)=>(m[x.q.ch]=(m[x.q.ch]||0)+1,m),{});
+  const weak=Object.entries(perCh).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`H${c}: ${n}`).join(' · ');
+  app.innerHTML=`<section class="result">
+      <span class="eyebrow">Uitslag grote eindtoets</span>
+      <div class="score ${ok?'ok':'bad'}">${score}/${qs.length}</div>
+      <h2>${ok?'Geslaagd!':'Nog niet geslaagd'}</h2>
+      <p>${wrong.length===0?'Alle vragen goed. Knap gedaan!':`Je had <strong>${wrong.length} ${wrong.length===1?'vraag':'vragen'} fout</strong>. ${ok?`Dat is binnen de norm van maximaal ${BIG_MAX_WRONG} fout.`:`De norm is maximaal ${BIG_MAX_WRONG} fout. Lees hieronder de juiste antwoorden en probeer het opnieuw.`}`}</p>
+      ${weak?`<p class="tally">Fout per hoofdstuk: <span class="mono">${weak}</span></p>`:''}
+      <p class="tally">Grote eindtoets: <span class="mono">${t.passes}×</span> geslaagd van <span class="mono">${t.tries}×</span> getoetst</p>
+    </section>
+    ${wrong.length?`<span class="eyebrow" style="display:block;margin-top:18px">Je foute antwoorden (${wrong.length})</span><div class="review">${wrong.map(x=>`<div class="rv"><span class="chl">Hoofdstuk ${x.q.ch} · ${esc(CHAPTERS.find(c=>c.id===x.q.ch).title)}</span><b>${esc(x.q.q)}</b><span class="y">Jouw antwoord: ${x.p==null?'geen':esc(x.q.o[x.p])}</span><span class="a">Juist: ${esc(x.q.o[x.q.a])}</span><span>${esc(x.q.w)}</span></div>`).join('')}</div>`:''}
+    <div class="actions">
+      ${ok?'<button class="btn echo" id="party">Feest nog een keer</button>':''}
+      <button class="btn ${ok?'ghost':'echo'}" id="retry">Grote eindtoets opnieuw</button>
+      <button class="btn ghost" id="home">Naar overzicht</button>
+    </div>`;
+  if($('#party')) $('#party').onclick=()=>celebrate(score,qs.length);
+  $('#retry').onclick=startBig;
+  $('#home').onclick=home;
+  toTop();
+  if(fresh&&ok) celebrate(score,qs.length);
+}
+
+/* ============ FEEST: vuurwerk, ballonnen en proostende glazen (±25 s) ============ */
+let partyOn=null;
+function celebrate(score,n){
+  if(partyOn) partyOn();
+  const DUR=25000;
+  const el=document.createElement('div');
+  el.className='party'; el.setAttribute('role','dialog'); el.setAttribute('aria-label','Gefeliciteerd, geslaagd');
+  el.style.setProperty('--dur',DUR+'ms');
+  const cols=['#ff4d6d','#ffd23f','#3bceac','#4ea8de','#c77dff','#ff8c42','#f15bb5','#80ed99'];
+  let balloons='';
+  for(let k=0;k<22;k++){
+    const w=40+Math.random()*30, c=cols[k%cols.length];
+    balloons+=`<div class="balloon" style="left:${Math.random()*92}%;--w:${w}px;--c:${c};--d:${8+Math.random()*6}s;--dl:${(k<8?k*.35:2+Math.random()*14).toFixed(2)}s"><i></i></div>`;
+  }
+  const bubbles=(x)=>[0,1,2,3,4].map(k=>`<circle class="bub" cx="${x-8+k*4}" cy="${118-k%2*6}" r="${1.6+k%3*.6}" fill="#fff8d6" style="animation-delay:${(k*.33).toFixed(2)}s"/>`).join('');
+  const glass=(cls,x)=>`<g class="${cls}">
+      <path d="M${x-26} 20 Q${x-28} 92 ${x-4} 122 L${x-3} 178 Q${x-24} 182 ${x-26} 190 L${x+26} 190 Q${x+24} 182 ${x+3} 178 L${x+4} 122 Q${x+28} 92 ${x+26} 20 Z" fill="rgba(220,240,255,.16)" stroke="rgba(235,248,255,.9)" stroke-width="2.4" stroke-linejoin="round"/>
+      <path d="M${x-25.4} 50 Q${x-26} 94 ${x-4} 119 L${x+4} 119 Q${x+26} 94 ${x+25.4} 50 Q${x} 56 ${x-25.4} 50 Z" fill="url(#champ)"/>
+      ${bubbles(x)}
+      <path d="M${x-18} 28 Q${x-20} 70 ${x-10} 100" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="3" stroke-linecap="round"/>
+    </g>`;
+  el.innerHTML=`<canvas></canvas>${balloons}
+    <div class="msg"><h2>Gefeliciteerd!</h2><p>Geslaagd voor de grote eindtoets met <b>${score}/${n}</b></p></div>
+    <div class="glasses" aria-hidden="true"><svg viewBox="0 0 240 200">
+      <defs><linearGradient id="champ" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset="1" stop-color="#f2b443"/></linearGradient></defs>
+      ${glass('gl-l',60)}${glass('gl-r',180)}
+      <g class="spark"><path d="M120 10 L125 31 L146 36 L125 41 L120 62 L115 41 L94 36 L115 31 Z" fill="#fff6c8"/><circle cx="120" cy="36" r="5" fill="#fff"/></g>
+      <g class="splash"><circle cx="108" cy="30" r="2.5" fill="#ffe9a3"/><circle cx="132" cy="26" r="2" fill="#ffe9a3"/><circle cx="120" cy="18" r="2.2" fill="#ffe9a3"/><circle cx="100" cy="20" r="1.6" fill="#ffe9a3"/><circle cx="140" cy="16" r="1.6" fill="#ffe9a3"/></g>
+    </svg></div>
+    <button class="snd" aria-label="Geluid aan of uit">🔊</button>
+    <button class="close">Verder</button><div class="timer"></div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('on'));
+
+  // Geluid: knallen en het tinkelen van de glazen, zonder geluidsbestanden.
+  let ac=null, muted=false;
+  try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+  const snd=el.querySelector('.snd');
+  snd.onclick=()=>{muted=!muted; snd.textContent=muted?'🔇':'🔊';};
+  function bang(vol){
+    if(!ac||muted) return;
+    const t0=ac.currentTime, len=ac.sampleRate*1.2, b=ac.createBuffer(1,len,ac.sampleRate), d=b.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);
+    const s=ac.createBufferSource(); s.buffer=b;
+    const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(2200,t0); f.frequency.exponentialRampToValueAtTime(180,t0+.8);
+    const g=ac.createGain(); g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(.001,t0+1.1);
+    s.connect(f).connect(g).connect(ac.destination); s.start(t0);
+  }
+  function crackle(){
+    if(!ac||muted) return;
+    for(let k=0;k<10;k++){
+      const t0=ac.currentTime+.35+Math.random()*.7, o=ac.createOscillator(), g=ac.createGain();
+      o.type='square'; o.frequency.value=1800+Math.random()*2500;
+      g.gain.setValueAtTime(.025,t0); g.gain.exponentialRampToValueAtTime(.0001,t0+.04);
+      o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0+.05);
+    }
+  }
+  function ting(){
+    if(!ac||muted) return;
+    const t0=ac.currentTime;
+    [2637,3520,5274].forEach((fr,k)=>{const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=fr;
+      g.gain.setValueAtTime(.09/(k+1),t0); g.gain.exponentialRampToValueAtTime(.0001,t0+1.4); o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0+1.5);});
+  }
+  const tingTimer=setTimeout(function tt(){ting(); T2=setInterval(ting,2600);},2600*.4);
+  let T2=null;
+
+  // Vuurwerk op canvas
+  const cv=el.querySelector('canvas'), cx=cv.getContext('2d');
+  let W=0,H=0,dpr=Math.min(2,window.devicePixelRatio||1);
+  const fit=()=>{W=el.clientWidth;H=el.clientHeight;cv.width=W*dpr;cv.height=H*dpr;cx.setTransform(dpr,0,0,dpr,0,0);};
+  fit(); window.addEventListener('resize',fit);
+  const rockets=[], parts=[];
+  function launch(){
+    const x=W*(.12+Math.random()*.76);
+    rockets.push({x,y:H,vx:(Math.random()-.5)*1.2,vy:-(H*.0105+Math.random()*H*.004),ty:H*(.12+Math.random()*.35),hue:Math.random()*360});
+  }
+  function explode(r){
+    const n=70+Math.floor(Math.random()*50), kind=Math.random(), sp=2.2+Math.random()*2.6;
+    for(let k=0;k<n;k++){
+      const a=Math.PI*2*k/n+Math.random()*.1, v=kind<.3?sp:sp*(.35+Math.random()*.75);
+      const hue=kind>.8?(r.hue+k*7)%360:r.hue+(Math.random()*30-15);
+      parts.push({x:r.x,y:r.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,dec:.009+Math.random()*.01,hue,glit:Math.random()<.3});
+    }
+    bang(.18+Math.random()*.12); if(Math.random()<.6) crackle();
+  }
+  const start=performance.now(); let next=0, raf=0, done=false;
+  function frame(now){
+    const el_t=now-start;
+    if(el_t<DUR-2500 && now>=next){
+      const finale=el_t>DUR-7500;
+      const burst=finale?2+Math.floor(Math.random()*3):1;
+      for(let k=0;k<burst;k++) launch();
+      next=now+(finale?260:el_t<1500?350:550+Math.random()*700);
+    }
+    cx.globalCompositeOperation='destination-out';
+    cx.fillStyle='rgba(0,0,0,.22)'; cx.fillRect(0,0,W,H);
+    cx.globalCompositeOperation='lighter';
+    for(let k=rockets.length-1;k>=0;k--){
+      const r=rockets[k]; r.x+=r.vx; r.y+=r.vy; r.vy+=.05;
+      cx.fillStyle=`hsl(${r.hue},100%,75%)`; cx.beginPath(); cx.arc(r.x,r.y,2.2,0,7); cx.fill();
+      if(r.y<=r.ty||r.vy>=0){explode(r); rockets.splice(k,1);}
+    }
+    for(let k=parts.length-1;k>=0;k--){
+      const p=parts[k]; p.x+=p.vx; p.y+=p.vy; p.vx*=.985; p.vy=p.vy*.985+.035; p.life-=p.dec;
+      if(p.life<=0){parts.splice(k,1);continue}
+      const a=p.glit?(Math.random()<.5?p.life:p.life*.2):p.life;
+      cx.fillStyle=`hsla(${p.hue},100%,${55+p.life*25}%,${a})`;
+      cx.beginPath(); cx.arc(p.x,p.y,1.2+p.life*1.6,0,7); cx.fill();
+    }
+    if(!done) raf=requestAnimationFrame(frame);
+  }
+  raf=requestAnimationFrame(frame);
+
+  function stop(){
+    if(done) return; done=true; partyOn=null;
+    clearTimeout(endT); clearTimeout(tingTimer); clearInterval(T2);
+    window.removeEventListener('resize',fit);
+    el.classList.remove('on');
+    setTimeout(()=>{cancelAnimationFrame(raf); el.remove(); if(ac) ac.close().catch(()=>{});},650);
+  }
+  const endT=setTimeout(stop,DUR);
+  el.querySelector('.close').onclick=stop;
+  partyOn=stop;
+}
+
+$('#backBtn').onclick=()=>{if(partyOn) partyOn(); home();};
 home();
 </script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(()=>{})}</script>
